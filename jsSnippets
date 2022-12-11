@@ -1,0 +1,9 @@
+import { AgGridModule } from 'ag-grid-angular'; @NgModule({ // Other module metadata imports: [ // Other imported modules AgGridModule.withComponents([]) ] }) export class AppModule { }
+4. In the component that will display the grid, import the AgGridAngular component and add it to the template.
+
+Copy code
+import { AgGridAngular } from 'ag-grid-angular'; @Component({ selector: 'app-pnl-grid', template: ` <ag-grid-angular style="width: 100%; height: 100%;" class="ag-theme-balham" [rowData]="rowData" [columnDefs]="columnDefs" [pagination]="true" [paginationPageSize]="10"> </ag-grid-angular> ` }) export class PnlGridComponent { @ViewChild('agGrid') agGrid: AgGridAngular; // Other component properties and methods }
+5. In the component class, define the rowData and columnDefs properties that will be used by the grid. You can set the initial values to an empty array, and then populate them with data from the API later on.
+
+Copy code
+export class PnlGridComponent { // Other component properties and methods rowData: any[] = []; columnDefs: any[] = []; }
