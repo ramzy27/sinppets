@@ -34,3 +34,61 @@ const columnDefs = Object.keys(rows[0]).map(key => {
       });
 
 
+
+
+@Component({
+    selector: 'app-data-grid',
+    template: `
+        <ag-grid-angular 
+            [rowData]="rowData" 
+            [columnDefs]="columnDefs"
+            [rowModelType]="'serverSide'"
+            [paginationPageSize]="pageSize"
+            [cacheBlockSize]="cacheBlockSize"
+            (modelUpdated)="onModelUpdated($event)">
+        </ag-grid-angular>
+    `
+})
+export class DataGridComponent {
+    columnDefs = [
+        {
+            headerName: 'Name',
+            field: 'name',
+            enableRowGroup: true
+        },
+        {
+            headerName: 'Category',
+            field: 'category',
+            enableRowGroup: true
+        },
+        {
+            headerName: 'Price',
+            field: 'price',
+            enablePivot: true
+        }
+    ];
+    rowData: any[];
+    pageSize = 10;
+    cacheBlockSize = 10;
+
+    constructor(private http: HttpClient) {}
+
+    ngOnInit() {
+        this.http.get('/data', { params: { page: 0, size: this.pageSize }})
+            .subscribe(data => {
+                this.rowData = data;
+            });
+    }
+
+    onModelUpdated(event: any) {
+        const page = event.api.paginationGetCurrentPage();
+        const size = event.api.paginationGetPageSize();
+        const pivotColumn = event.api.columnApi.getPivotColumns()[0];
+
+        // Fetch pivoted data from the server
+        this.http.get('/data', { params: { page, size, pivotColumn }})
+            .subscribe(data => {
+                event.api.setRowData(data);
+            });
+    }
+}
