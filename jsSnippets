@@ -7,3 +7,30 @@ import { AgGridAngular } from 'ag-grid-angular'; @Component({ selector: 'app-pnl
 
 Copy code
 export class PnlGridComponent { // Other component properties and methods rowData: any[] = []; columnDefs: any[] = []; }
+
+const columnDefs = Object.keys(rows[0]).map(key => {
+          return {headerName: key, field: key};
+        });
+
+        // Set the grid options
+        this.agGrid.gridOptions = {
+          columnDefs: columnDefs,
+          rowData: rows
+        };
+      });
+  }
+}
+
+// Generate the column definitions from the first row of data
+        const columnDefs = Object.keys(rows[0]).map(key => {
+          return {headerName: key, field: key};
+        });
+
+        // Set the grid options
+        this.agGrid.gridOptions = {
+          columnDefs: columnDefs,
+          rowData: rows
+        };
+      });
+
+
