@@ -92,3 +92,37 @@ export class DataGridComponent {
             });
     }
 }
+
+
+
+import { Injectable } from '@angular/core';
+import { createSelector, createFeatureSelector, Store, select } from '@ngrx/store';
+
+export interface SpringPageState {
+  data: any[];
+  totalPages: number;
+  pageSize: number;
+  currentPage: number;
+}
+
+const initialState: SpringPageState = {
+  data: [],
+  totalPages: 0,
+  pageSize: 0,
+  currentPage: 0
+};
+
+export const selectSpringPageState = createFeatureSelector<SpringPageState>('springPage');
+
+@Injectable({
+  providedIn: 'root'
+})
+export class SpringPageStore {
+  constructor(private store: Store<SpringPageState>) {}
+
+  get state() {
+    return this.store.pipe(select(selectSpringPageState));
+  }
+
+  updatePage(page: number) {
+    // Dispatch an
