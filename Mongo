@@ -38,3 +38,64 @@ db.EPI.aggregate([
       }
    }
 ])
+
+
+
+
+db.EPI.aggregate([
+   {
+      $match: {
+         quantity: {$ne: 0}
+      }
+   },
+   {
+      $lookup: {
+         from: "Instruments",
+         let: { instrumentId: "$instrumentId" },
+         pipeline: [
+            {
+               $match: {
+                  $expr: {
+                     $eq: ["$instrumentId", "$$instrumentId"]
+                  }
+               }
+            }
+         ],
+         as: "instrument_details"
+      }
+   },
+   {
+      $unwind: "$instrument_details"
+   },
+   {
+      $lookup: {
+         from: "Underlyings",
+         let: { jobuuid: "$instrument_details.jobuuid" },
+         pipeline: [
+            {
+               $match: {
+                  $expr: {
+                     $eq: ["$jobuuid", "$$jobuuid"]
+                  }
+               }
+            }
+         ],
+         as: "underlying_details"
+      }
+   },
+   {
+      $unwind: "$underlying_details"
+   },
+   {
+      $match: {
+         "underlying_details.underlyingCode": {$in: [<list of underlyings>]}
+      }
+   },
+   {
+      $group: {
+         _id: "$underlying_details.underlyingCode",
+         total_quantity: {$sum: "$quantity"}
+      }
+   }
+])
+
