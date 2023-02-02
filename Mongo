@@ -159,3 +159,24 @@ db.EPI.aggregate([
 ])
 
 
+
+
+
+db.RiskResults.aggregate([
+   {
+      $match: {
+         "folio.qty": { $ne: 0 }
+      }
+   },
+   {
+      $match: {
+         "underlying.code": { $in: [<list of underlyings>] }
+      }
+   },
+   {
+      $group: {
+         _id: "$underlying.code",
+         total_quantity: { $sum: "$folio.qty" }
+      }
+   }
+])
