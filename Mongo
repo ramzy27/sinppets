@@ -180,3 +180,29 @@ db.RiskResults.aggregate([
       }
    }
 ])
+
+
+
+db.getCollection('risk').aggregate([
+  {
+    $group: {
+      _id: null,
+      processIdSize: {
+        $sum: {
+          $cond: [
+            { $isArray: "$processId" },
+            { $sum: { $map: { input: "$processId", in: { $bsonSize: "$$this" } } } },
+            { $bsonSize: "$processId" }
+          ]
+        }
+      }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      processIdSize: 1
+    }
+  }
+])
+
