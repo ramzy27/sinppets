@@ -206,3 +206,30 @@ db.getCollection('risk').aggregate([
   }
 ])
 
+db.getCollection('risk').aggregate([
+  {
+    $match: {
+      processId: { $in: [123, 34, 43] },
+      rollDate: '20230202'
+    }
+  },
+  {
+    $project: {
+      documentSize: { $bsonSize: "$$ROOT" }
+    }
+  },
+  {
+    $group: {
+      _id: null,
+      totalSize: { $sum: "$documentSize" }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      totalSize: 1
+    }
+  }
+])
+
+
