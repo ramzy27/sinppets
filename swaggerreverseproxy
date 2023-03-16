@@ -1,0 +1,139 @@
+import org.springdoc.core.SwaggerUiConfigParameters;
+import org.springdoc.core.SwaggerUiOAuthProperties;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SwaggerAggregatorConfig {
+
+    @Value("${cloud.service.api-docs-url}")
+    private String cloudServiceApiDocsUrl;
+
+    public SwaggerAggregatorConfig(SwaggerUiConfigParameters swaggerUiConfigParameters, SwaggerUiOAuthProperties swaggerUiOAuthProperties) {
+        swaggerUiConfigParameters.addGroup("Cloud Service")
+                .url(cloudServiceApiDocsUrl);
+    }
+}
+cloud.service.api-docs-url=http://gcp-cloud-service-url/v3/api-docs
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: gcp-cloud-service
+          uri: http://gcp-cloud-service-url
+          predicates:
+            - Path=/gcp-cloud-service/**
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>mongo-to-bigquery</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.6.3</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <properties>
+        <java.version>11</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>spring-cloud-gcp-starter-storage</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>spring-cloud-gcp-starter-bigquery</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+
+import com.google.cloud.bigquery.*;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import com.google.gson.Gson;
+import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.nio.channels.Channels;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+@Service
+public class MongoToBigQueryTransferService {
+
+    private static final Logger logger = LoggerFactory.getLogger(MongoToBigQueryTransferService.class);
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private Storage storage;
+
+    @Autowired
+    private BigQuery bigQuery;
+
+    public void transferData(String collectionName, String bucketName, String gcsObjectName, String datasetName, String tableName) {
+        // Export MongoDB data to JSON
+        List<Document> documents = mongoTemplate.findAll(Document.class, collectionName);
+        String jsonContent = new Gson().toJson(documents);
+
+        // Upload JSON data to Google Cloud Storage
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, gcsObjectName)).build();
+        storage.createFrom(Channels.newInputStream(Channels.newChannel(jsonContent.getBytes(StandardCharsets.UTF_8).newInputStream())), blobInfo);
+
+        // Load data from GCS to BigQuery
+        TableId tableId = TableId.of(datasetName, tableName);
+        LoadJobConfiguration loadJobConfiguration = LoadJobConfiguration.newBuilder(tableId, "gs://" + bucketName + "/" + gcsObjectName)
+                .setFormatOptions(FormatOptions.json())
+                .setAutodetect(true)
+                .build();
+
+        Job loadJob = bigQuery.create(JobInfo.of(loadJobConfiguration));
+        try {
+            Job completedJob = loadJob.waitFor();
+            if (completedJob.getStatus().getError() != null) {
+                logger.error("Error loading data to BigQuery: {}", completedJob.getStatus().getError().toString());
+            } else {
+                logger.info("Data loaded successfully to BigQuery");
+            }
+        } catch (InterruptedException e) {
+            logger.error("Error waiting for load job to complete", e);
+            Thread.currentThread().interrupt();
+        }
+    }
+}
+
