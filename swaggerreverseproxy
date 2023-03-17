@@ -137,3 +137,220 @@ public class MongoToBigQueryTransferService {
     }
 }
 
+import org.springdoc.core.GroupedOpenApi;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SwaggerAggregatorConfig {
+
+    @Value("${onpremise.server.url}")
+    private String onPremiseServerUrl;
+
+    @Bean
+    public GroupedOpenApi cloudServiceOpenApi() {
+        String cloudServiceApiDocsUrl = onPremiseServerUrl + "/cloud-service-api-docs";
+        return GroupedOpenApi.builder()
+                .group("Cloud Service")
+                .pathsToMatch("/**")
+                .openApiCustomiser(api -> api.servers(List.of(new Server().url(cloudServiceApiDocsUrl))))
+                .build();
+    }
+}
+
+
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+@RestController
+public class CloudServiceApiDocsController {
+
+    @Value("${cloud.service.api-docs-url}")
+    private String cloudServiceApiDocsUrl;
+
+    @GetMapping("/cloud-service-api-docs")
+    public ResponseEntity<String> fetchCloudServiceApiDocs() {
+        RestTemplate restTemplate = new RestTemplate();
+        return restTemplate.getForEntity(cloudServiceApiDocsUrl, String.class);
+    }
+}
+
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.InsertAllRequest;
+import com.google.cloud.bigquery.InsertAllResponse;
+import com.google.cloud.bigquery.TableId;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class MongoToBigQueryTransferService {
+
+    @Autowired
+    private MongoDbService mongoDbService;
+
+    @Autowired
+    private BigQueryService bigQueryService;
+
+    public void transferData() {
+        MongoCollection<Document> collection = mongoDbService.getCollection();
+        TableId tableId = bigQueryService.getTableId();
+        BigQuery bigquery = bigQueryService.getBigQueryInstance();
+
+        // Ensure table exists with the correct schema and partitioning
+        bigQueryService.createTableIfNotExists(collection, tableId);
+
+        // Transfer data
+        List<InsertAllRequest.RowToInsert> rows = mongoDbService.getRowsFromCollection(collection);
+        InsertAllRequest insertRequest = InsertAllRequest.newBuilder(tableId).setRows(rows).build();
+        InsertAllResponse insertResponse = bigquery.insertAll(insertRequest);
+
+        if (insertResponse.hasErrors()) {
+            System.err.println("Errors occurred while inserting rows:");
+            insertResponse.getInsertErrors().forEach((index, errors) -> {
+                System.err.println("Row index: " + index);
+                errors.forEach(error -> System.err.println("Error: " + error.getMessage()));
+            });
+        }
+    }
+}
+
+
+import com.google.cloud.bigquery.InsertAllRequest;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class MongoDbService {
+
+    @Value("${mongodb.uri}")
+    private String mongoUri;
+
+    @Value("${mongodb.database}")
+    private String mongoDatabase;
+
+    @Value("${mongodb.collection}")
+    private String mongoCollection;
+
+    public MongoCollection<Document> getCollection() {
+        MongoClient mongoClient = MongoClients.create(mongoUri);
+        return mongoClient.getDatabase(mongoDatabase).getCollection(mongoCollection);
+    }
+
+    public List<InsertAllRequest.RowToInsert> getRowsFromCollection(MongoCollection<Document> collection) {
+        List<InsertAllRequest.RowToInsert> rows = new ArrayList<>();
+        for (Document document : collection.find()) {
+            InsertAllRequest.RowToInsert row = InsertAllRequest.RowToInsert.of(document);
+            rows.add(row);
+        }
+        return rows;
+    }
+}
+
+
+import com.google.cloud.bigquery.*;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+@Service
+public class BigQueryService {
+
+    @Value("${bigquery.projectId}")
+    private String bigQueryProjectId;
+
+    @Value("${bigquery.datasetId}")
+    private String bigQueryDatasetId;
+
+    @Value("${bigquery.tableId}")
+    private String bigQueryTableId;
+
+    public BigQuery getBigQueryInstance() {
+        return BigQueryOptions.getDefaultInstance().getService();
+    }
+
+    public TableId getTableId() {
+        return TableId.of(bigQueryProjectId, bigQueryDatasetId, bigQueryTableId);
+    }
+
+    public void createTableIfNotExists(MongoCollection<Document> collection, TableId tableId) {
+        BigQuery bigquery = getBigQueryInstance();
+        Table table = bigquery.getTable(tableId);
+
+        if (table == null) {
+            // Infer schema from the first document
+            Document firstDocument = collection.find().first();
+            Schema schema = SchemaInferenceUtil.inferSchemaFromDocument(firstDocument);
+
+            // Create table with inferred schema and partitioning
+            TableDefinition tableDefinition = StandardTableDefinition.newBuilder()
+                    .setSchema(schema)
+                    .setTimePartitioning(TimePartitioning.newBuilder(TimePartitioning.Type.DAY)
+                            .setField("rolldate")
+                            .build())
+                    .build();
+            TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
+            bigquery.create(tableInfo);
+        }
+    }
+}
+
+
+import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.Schema;
+import com.google.cloud.bigquery.StandardSQLTypeName;
+import org.bson.Document;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class SchemaInferenceUtil {
+
+    public static Schema inferSchemaFromDocument(Document document) {
+        List<Field> fields = new ArrayList<>();
+        document.forEach((k, v) -> {
+            Field.Builder fieldBuilder = Field.newBuilder(k, inferFieldTypeFromValue(v));
+            if (k.equals("rolldate")) {
+                fieldBuilder.setMode(Field.Mode.NULLABLE);
+            }
+            fields.add(fieldBuilder.build());
+        });
+        return Schema.of(fields);
+    }
+
+    private static StandardSQLTypeName inferFieldTypeFromValue(Object value) {
+        if (value instanceof Integer) {
+            return StandardSQLTypeName.INT64;
+        } else if (value instanceof Long) {
+            return StandardSQLTypeName.INT64;
+        } else if (value instanceof Float) {
+            return StandardSQLTypeName.FLOAT64;
+        } else if (value instanceof Double) {
+            return StandardSQLTypeName.FLOAT64;
+        } else if (value instanceof Boolean) {
+            return StandardSQLTypeName.BOOL;
+        } else if (value instanceof String) {
+            return StandardSQLTypeName.STRING;
+        } else {
+            return StandardSQLTypeName.STRING;
+        }
+    }
+}
+
+
