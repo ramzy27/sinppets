@@ -241,3 +241,24 @@ db.collection.updateMany(
       }
    }
 )
+
+var batchSize = 1000;
+var count = db.collection.count({ rolldate: 20230314 });
+var numBatches = Math.ceil(count / batchSize);
+
+for (var i = 0; i < numBatches; i++) {
+   var cursor = db.collection.find({ rolldate: 20230314 }).skip(i * batchSize).limit(batchSize);
+
+   var bulk = db.collection.initializeUnorderedBulkOp();
+
+   cursor.forEach(function(doc) {
+      bulk.find({ _id: doc._id }).updateOne({
+         $set: {
+            expireAt: new Date("2023-03-31T00:00:00Z")
+         }
+      });
+   });
+
+   bulk.execute();
+}
+
