@@ -234,16 +234,10 @@ db.getCollection('risk').aggregate([
 
 
 db.collection.updateMany(
-   { $expr: { $eq: [ "$rolldate", 20230314 ] } },
+   { rolldate: 20230314 },
    {
       $set: {
-         expireAt: {
-            $dateFromParts: {
-               year: 2023,
-               month: 3,
-               day: 31
-            }
-         }
+         expireAt: new Date("2023-03-31T00:00:00Z")
       }
    }
 )
