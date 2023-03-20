@@ -233,3 +233,18 @@ db.getCollection('risk').aggregate([
 ])
 
 
+db.collection.updateMany(
+   { rolldate: "20230314" },
+   {
+      $set: {
+         expireAt: {
+            $where: function() {
+               var date = new Date();
+               date.setFullYear(2023, 2); // 2 is the zero-based index for March
+               date.setDate(30); // Set the date to the last day of the month
+               return date.toISOString();
+            }
+         }
+      }
+   }
+)
