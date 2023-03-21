@@ -353,4 +353,58 @@ public class SchemaInferenceUtil {
     }
 }
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springdoc.core.GroupedOpenApi;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.util.List;
+
+@Configuration
+public class SwaggerAggregatorConfig {
+
+    @Value("${query-service.url}")
+    private String queryServiceUrl;
+
+    @Value("${scneario-service.url}")
+    private String scenarioServiceUrl;
+
+    @Autowired
+    private WebClient.Builder webClientBuilder;
+
+    @Bean
+    public GroupedOpenApi queryServiceOpenApi() {
+        OpenAPI openAPI = fetchOpenApiFromService(queryServiceUrl + "/api-docs");
+        return GroupedOpenApi.builder()
+                .group("query Service")
+                .pathsToMatch("/**")
+                .openApiCustomiser(api -> api.servers(List.of(new Server().url(queryServiceUrl))))
+                .setGroupOpenApi(openAPI)
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi scenarioServiceOpenApi() {
+        OpenAPI openAPI = fetchOpenApiFromService(scenarioServiceUrl + "/api-docs");
+        return GroupedOpenApi.builder()
+                .group("scenario Service")
+                .pathsToMatch("/**")
+                .openApiCustomiser(api -> api.servers(List.of(new Server().url(scenarioServiceUrl))))
+                .setGroupOpenApi(openAPI)
+                .build();
+    }
+
+    private OpenAPI fetchOpenApiFromService(String apiUrl) {
+        return webClientBuilder.build()
+                .get()
+                .uri(apiUrl)
+                .retrieve()
+                .bodyToMono(OpenAPI.class)
+                .block();
+    }
+}
 
