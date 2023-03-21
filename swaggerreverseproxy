@@ -497,3 +497,50 @@ public class BigqueryService {
 
     // ...existing code for insertData method...
 }
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+@Service
+public class MongoToBigQueryTransferService {
+
+    private static final int BATCH_SIZE = 500; // Adjust this value according to your needs
+
+    // ...
+
+    public void transferData() {
+        MongoCollection<Document> collection = mongoDbService.getCollection();
+        TableId tableId = bigQueryService.getTableId();
+        BigQuery bigquery = bigQueryService.getBigQueryInstance();
+
+        // Ensure table exists with the correct schema and partitioning
+        bigQueryService.createTableIfNotExists(collection, tableId);
+
+        // Transfer data
+        List<InsertAllRequest.RowToInsert> rows = mongoDbService.getRowsFromCollection(collection);
+
+        // Split rows into smaller batches
+        for (List<InsertAllRequest.RowToInsert> batch : splitList(rows, BATCH_SIZE)) {
+            InsertAllRequest insertRequest = InsertAllRequest.newBuilder(tableId).setRows(batch).build();
+            InsertAllResponse insertResponse = bigquery.insertAll(insertRequest);
+
+            if (insertResponse.hasErrors()) {
+                System.err.println("Errors occurred while inserting rows:");
+                insertResponse.getInsertErrors().forEach((index, errors) -> {
+                    System.err.println("Row index: " + index);
+                    errors.forEach(error -> System.err.println("Error: " + error.getMessage()));
+                });
+            }
+        }
+    }
+
+    private <T> List<List<T>> splitList(List<T> list, int chunkSize) {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(list.iterator(), Spliterator.ORDERED), false)
+                .collect(Collectors.groupingBy(item -> list.indexOf(item) / chunkSize))
+                .values()
+                .stream()
+                .map(groupedItems -> new ArrayList<>(groupedItems))
+                .collect(Collectors.toList());
+    }
+}
+
+
