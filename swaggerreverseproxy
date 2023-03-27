@@ -544,3 +544,19 @@ public class MongoToBigQueryTransferService {
 }
 
 
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: query-service
+          uri: lb://query-service
+          predicates:
+            - Path=/query-service/**
+          filters:
+            - StripPrefix=1
+        - id: hpl-service-v4
+          uri: http://gcp.hpl.com
+          predicates:
+            - Path=/query-service/api/v4/**
+          filters:
+            - RewritePath=/query-service/api/v4/(?<path>.*), /$\{path}
