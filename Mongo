@@ -267,3 +267,37 @@ var skipAmount = 0;
 var limitAmount = 1000;
 db.getCollection("RiskResult").find({instrument: {$in: [11, 12, 45]}}).skip(skipAmount).limit(limitAmount).toCsv()
 
+
+db.risk.aggregate([
+  {
+    $match: {
+      "metrics.k": "eqvega"
+    }
+  },
+  {
+    $project: {
+      positionId: "$riskSource.position.positionId",
+      eqvega: {
+        $arrayElemAt: [
+          {
+            $map: {
+              input: {
+                $filter: {
+                  input: "$metrics",
+                  as: "metric",
+                  cond: { $eq: ["$$metric.k", "eqvega"] }
+                }
+              },
+              as: "filteredMetric",
+              in: "$$filteredMetric.v"
+            }
+          },
+          0
+        ]
+      },
+      riskScenarioName: "$riskScenario.name"
+    }
+  }
+])
+
+
