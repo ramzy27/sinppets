@@ -274,30 +274,38 @@ db.risk.aggregate([
       "metrics.k": "eqvega"
     }
   },
+{
+    $group: {
+      _id: {
+        positionId: "$riskSource.position.positionId",
+        eqvega: {
+          $arrayElemAt: [
+            {
+              $map: {
+                input: {
+                  $filter: {
+                    input: "$metrics",
+                    as: "metric",
+                    cond: { $eq: ["$$metric.k", "eqvega"] }
+                  }
+                },
+                as: "filteredMetric",
+                in: "$$filteredMetric.v"
+              }
+            },
+            0
+          ]
+        },
+        riskScenarioName: "$riskScenario.name"
+      }
+    }
+  },
   {
     $project: {
-      positionId: "$riskSource.position.positionId",
-      eqvega: {
-        $arrayElemAt: [
-          {
-            $map: {
-              input: {
-                $filter: {
-                  input: "$metrics",
-                  as: "metric",
-                  cond: { $eq: ["$$metric.k", "eqvega"] }
-                }
-              },
-              as: "filteredMetric",
-              in: "$$filteredMetric.v"
-            }
-          },
-          0
-        ]
-      },
-      riskScenarioName: "$riskScenario.name"
+      _id: 0,
+      positionId: "$_id.positionId",
+      eqvega: "$_id.eqvega",
+      riskScenarioName: "$_id.riskScenarioName"
     }
   }
 ])
-
-
