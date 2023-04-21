@@ -126,3 +126,18 @@ export class SpringPageStore {
 
   updatePage(page: number) {
     // Dispatch an
+
+
+this.columns$.subscribe((columns) => {
+  // Custom sorting function to position 'rtpl' and 'hyponl' at positions 6 and 7
+  const sortedColumns = columns.sort((a, b) => {
+    if (a.field === 'rtpl') return -1;
+    if (b.field === 'rtpl') return 1;
+    if (a.field === 'hyponl' && b.field !== 'rtpl') return -1;
+    if (b.field === 'hyponl' && a.field !== 'rtpl') return 1;
+    return 0;
+  });
+
+  // Create column definitions for sorted columns
+  sortedColumns.forEach((c) => columnDef.push(makeColumnDefinition(c)));
+});
