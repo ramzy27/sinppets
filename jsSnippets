@@ -169,3 +169,30 @@ this.columns$.subscribe((columns) => {
   // Create column definitions for sorted columns
   sortedColumns.forEach((c) => columnDef.push(makeColumnDefinition(c)));
 });
+
+this.columns$.subscribe((columns) => {
+  // Function to find and remove the column with the specified field from the array
+  const findAndRemoveColumn = (field) => {
+    const index = columns.findIndex((column) => column.field === field);
+    if (index !== -1) {
+      return columns.splice(index, 1)[0];
+    }
+    return null;
+  };
+
+  // Find and remove 'rtpl' and 'hyponl' columns from the array
+  const rtplColumn = findAndRemoveColumn('rtpl');
+  const hyponlColumn = findAndRemoveColumn('hyponl');
+
+  // Insert 'rtpl' and 'hyponl' columns at positions 6 and 7, respectively, if they exist
+  if (rtplColumn) {
+    columns.splice(5, 0, rtplColumn); // 5 is the index for 6th position, as the array is 0-indexed
+  }
+  if (hyponlColumn) {
+    columns.splice(6, 0, hyponlColumn); // 6 is the index for 7th position, as the array is 0-indexed
+  }
+
+  // Create column definitions for the modified columns array
+  columns.forEach((c) => columnDef.push(makeColumnDefinition(c)));
+});
+
