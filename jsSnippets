@@ -33,6 +33,30 @@ const columnDefs = Object.keys(rows[0]).map(key => {
         };
       });
 
+displayFolio({ patchState, dispatch }: StateContext<HplResultStateModel>) {
+  // Your existing code to get the necessary values
+
+  return this.checkMandatoryFields(/* arguments */).pipe(
+    concatMap(() => {
+      this.displayWarningForRtpl(displayInUsd, reportingCcy);
+      return this.service.getStrategicHplResult(params).pipe(
+        switchMap(response => dispatch(new DisplaySuccess(response))),
+        catchError(err => {
+          // Dispatch the DisplayFailed action with the error
+          dispatch(new DisplayFailed(err));
+          return of(null); // Return an Observable to complete the pipe
+        })
+      );
+    }),
+    catchError(err => {
+      // If an error occurs in the checkMandatoryFields method, dispatch the DisplayFailed action with the error
+      dispatch(new DisplayFailed(err));
+      return of(null); // Return an Observable to complete the pipe
+    })
+  ).subscribe(); // Add the subscribe method to start the execution
+}
+
+
 
 this.columns$.subscribe((columns) => {
   // Function to find and remove the column with the specified field from the array
