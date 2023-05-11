@@ -220,3 +220,38 @@ this.columns$.subscribe((columns) => {
   columns.forEach((c) => columnDef.push(makeColumnDefinition(c)));
 });
 
+// Custom aggregation function
+function sumWithNan(values) {
+  let sum = 0;
+  let includesNaN = false;
+  for (let i = 0; i < values.length; i++) {
+    if (isNaN(values[i])) {
+      includesNaN = true;
+    } else {
+      sum += values[i];
+    }
+  }
+  // Return an object that includes the sum and the includesNaN flag
+  return { sum, includesNaN };
+}
+
+// Custom cell renderer
+function sumCellRenderer(params) {
+  // Check if the sum includes NaN values and apply special formatting
+  if (params.value.includesNaN) {
+    return `<span class="sum-with-nan">${params.value.sum}*</span>`;
+  } else {
+    return params.value.sum;
+  }
+}
+
+// Column definition
+{
+  headerName: "Sum",
+  field: "sumField",
+  aggFunc: sumWithNan,  // Use the custom aggregation function
+  cellRenderer: sumCellRenderer  // Use the custom cell renderer
+}
+
+
+
