@@ -32,6 +32,38 @@ const columnDefs = Object.keys(rows[0]).map(key => {
           rowData: rows
         };
       });
+      
+      
+      {
+  headerName: "Sum",
+  field: "sumField",
+  aggFunc: sumWithNan,  // Use the custom aggregation function
+  cellStyle: function(params) {
+    // If the value is not null and the sum is negative, change the color to red.
+    if (params.value && params.value.sum < 0) {
+      return { color: 'red' };
+    } else {
+      return null;
+    }
+  },
+  cellRenderer: function(params) {
+    // If the value is not null, append a * to the sum and add a tooltip if it includes NaN values.
+    if (params.value) {
+      return params.value.includesNaN ? `<span title="This sum includes NaN values">${params.value.sum}*</span>` : params.value.sum.toString();
+    } else {
+      return '';
+    }
+  },
+  valueFormatter: function(params) {
+    // If the value is not null, format the sum with two decimal places.
+    if (params.value) {
+      return parseFloat(params.value.sum).toFixed(2);
+    } else {
+      return '';
+    }
+  }
+}
+
 
 displayFolio({ patchState, dispatch }: StateContext<HplResultStateModel>) {
   // Your existing code to get the necessary values
