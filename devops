@@ -1,0 +1,130 @@
+Let's break this down into several parts:
+
+**1. Modify `pom.xml` in your Spring Boot application:**
+
+Include the `spring-boot-maven-plugin` with layering enabled. You can also add the `maven-assembly-plugin` to package your project as a ZIP file.
+
+```xml
+<project>
+  ...
+  <build>
+    <plugins>
+      ...
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <layers>
+            <enabled>true</enabled>
+          </layers>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <format>zip</format>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      ...
+    </plugins>
+  </build>
+</project>
+```
+
+This will create a layered JAR and a ZIP file when you run `mvn package`.
+
+**2. Create a generic Dockerfile:**
+
+Place this Dockerfile in your platform builder repository. This Dockerfile is generic and can be used for all of your Spring Boot applications.
+
+```Dockerfile
+# Use a base image with Java 11
+FROM adoptopenjdk:11-jdk-hotspot as builder
+
+# Work with /app directory
+WORKDIR /app
+
+# Copy the JAR file
+COPY target/*.jar application.jar
+
+# Extract the layers
+RUN java -Djarmode=layertools -jar application.jar extract
+
+# Use a base image with Java 11 for the final image
+FROM adoptopenjdk:11-jdk-hotspot
+
+# Work with /app directory
+WORKDIR /app
+
+# Copy the layers from the builder image
+COPY --from=builder /app/dependencies/ ./
+COPY --from=builder /app/spring-boot-loader/ ./
+COPY --from=builder /app/snapshot-dependencies/ ./
+COPY --from=builder /app/application/ ./
+
+# Run the application
+ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]
+```
+
+**3. Helm values files:**
+
+Place your Helm values files in your application repositories. These files contain configuration values that are specific to each application. Here's an example `values.yaml` file:
+
+```yaml
+replicaCount: 1
+
+image:
+  repository: your-image-repo
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+```
+
+**4. Jenkins pipeline:**
+
+Your Jenkins pipeline can be configured to:
+
+- Pull the ZIP file from Nexus.
+- Unzip the file and build the Docker image using the generic Dockerfile from your platform builder repository.
+- Push the Docker image to your container registry.
+- Use Helm to deploy your application to your GKE cluster using the Helm chart and the values file from your application repository.
+
+Here's a very simplified example of what your Jenkins pipeline script might look like:
+
+```groovy
+pipeline {
+  agent any
+  stages {
+    stage('Pull ZIP from Nexus') {
+      steps {
