@@ -317,6 +317,42 @@ function sumCellRenderer(params) {
   }
 }
 
+export class YourComponent implements OnInit {
+  private gridApi;
+  includeNanInSum: boolean;
+
+  constructor(private includeNanInSumService: IncludeNanInSumService) {
+    this.includeNanInSumService.includeNanInSum$.subscribe(includeNanInSum => {
+      this.includeNanInSum = includeNanInSum;
+      if (this.gridApi) {
+        this.gridApi.refreshClientSideRowModel('aggregate');
+      }
+    });
+  }
+
+  onGridReady(params) {
+    this.gridApi = params.api;
+  }
+
+  sumWithNan() {
+    return params => {
+      let sum = 0;
+      let containsNaN = false;
+
+      for (let value of params.values) {
+        if (isNaN(value)) {
+          containsNaN = true;
+          if (!this.includeNanInSum) {
+            continue;
+          }
+        }
+        sum += value;
+      }
+
+      return sum;
+    };
+  }
+}
 
 
 
