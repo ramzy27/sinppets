@@ -2201,3 +2201,57 @@ OpenAI Discord
 Updates & FAQ
 Log out
 
+
+
+API Deployment Status
+
+Model: GPT-4
+
+User
+Écris un bon mail en anglais a un collègue pour l'informer de l'avancement  sur le déploiement de l'API:
+Salut Edwin,
+l'API n'est toujours pas deployé en sur le projet gcp riskstore . Il manque encore les droits pour le service account builder du projet compute sur notre projet gcp
+Voici ce j'ai pu faire jusqu'ici 
+Je travaille sur un clone du projet gcp-api sous mon espace pour éviter de polluer l'historique.
+Les modicion consistent essentiellement a modifier modifier le pom pour packager l'application comme zip avec un fichier application.json qui doit pas être sous la racine. C'est ce que la plateforme Hydre attend comme structure.
+Donc j'ai modifié le pom et créé un fichier package-servicd.xml et j'ai rajouté application.json.
+J'ai créé une pipeline Jenkins expérimentale pour déployer le zip sur Nexus.
+
+Je travaille sur mes branches pour les projets Hydre.
+J'ai modifié Essentiellement le builder:
+J'ai modifier le script pour la partie java pour être compatible avec une structure du projet Spring boot et aussi j'ai modifiê le docker file pour utiliser azuul et aussi utiliser le layering de Spring boot pour optimiser la création des images et gagner en performance. On pourra peut être créér un type de packaging dedié pour Spring boot en plus de celui de compute.
+
+Les variables gcp-project dans le projet compute ne sont pas dynamique et sont actuellement fixés sur le projet compute. J'ai aussi modifié le code pour les rendre dynamique mais là j'ai les soucis d'accès du service account de compute sur notre gcp.
+Je me demande aussi si on veut pas juste donner les droits IAM account admin pour ce service et qu'il fasse imperaonate pour utiliser un autre service qui a les droitd gke dans notre projet
+
+ChatGPT
+Subject: API Deployment Progress Report on GCP Riskstore Project
+
+Hi Edwin,
+
+I hope this message finds you well. I wanted to give you an update on the deployment of the API on our GCP Riskstore project.
+
+We've hit a snag; the API is not yet deployed. The main challenge we're experiencing is obtaining the necessary permissions for the service account builder on our Compute project in GCP.
+
+Here's a breakdown of what I've accomplished so far:
+
+I've been working on a clone of the GCP API project in my own workspace to avoid cluttering the commit history.
+
+The main task involved altering the pom.xml to package the application as a ZIP, inclusive of an application.json file which isn't placed at the root. This aligns with the structure that the Hydre platform anticipates.
+
+As a result, I've modified the pom.xml, created a package-service.xml, and added the application.json file.
+
+I've also established an experimental Jenkins pipeline to deploy the ZIP to Nexus.
+
+For the Hydre projects, I've been focusing on my own branches. The builder has seen major changes:
+
+I've adapted the Java section of the script to be compatible with a Spring Boot project structure.
+I've amended the Dockerfile to use Azuul and also utilize Spring Boot layering, which optimizes image creation and improves performance. This opens up the possibility of creating a dedicated packaging type for Spring Boot in addition to that of Compute.
+One of the problems I encountered pertains to the gcp-project variables in the Compute project. They're currently static and set to the Compute project. I've modified the code to make these dynamic, but this has led to access issues with the Compute service account on our GCP.
+
+I'm considering whether we should simply provide IAM account admin rights to this service and use impersonation to utilize another service that has GKE rights in our project. I would appreciate your thoughts on this matter.
+
+I'll keep you posted on any further updates or changes as they occur.
+
+
+
