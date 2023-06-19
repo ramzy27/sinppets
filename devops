@@ -268,5 +268,41 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: "http://localhost:8080/auth/realms/myrealm"
+          
+          
+          
+          import org.springframework.boot.autoconfigure.security.oauth2.resource.AuthoritiesExtractor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.provider.token.DefaultAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.DefaultUserAuthenticationConverter;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Configuration
+public class OAuth2ResourceServerConfig {
+
+    @Bean
+    public DefaultAccessTokenConverter accessTokenConverter() {
+        DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter();
+        DefaultUserAuthenticationConverter userTokenConverter = new DefaultUserAuthenticationConverter();
+        userTokenConverter.setAuthoritiesExtractor(authoritiesExtractor());
+        accessTokenConverter.setUserTokenConverter(userTokenConverter);
+        return accessTokenConverter;
+    }
+
+    @Bean
+    public AuthoritiesExtractor authoritiesExtractor() {
+        return map -> ((List<String>) map.get("groups")).stream()
+                .map(group -> "ROLE_" + group.toUpperCase())
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+    }
+}
+
 
 
