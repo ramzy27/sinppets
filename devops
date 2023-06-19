@@ -238,3 +238,35 @@ spec:
   targetCPUUtilizationPercentage: 50
 
 
+
+# Client properties
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          myclient:
+            client-id: myclient
+            client-secret: mysecret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/myclient"
+            scope: openid
+
+# Provider properties
+spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          myprovider:
+            issuer-uri: "http://localhost:8080/auth/realms/myrealm"
+
+# Resource Server properties
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:8080/auth/realms/myrealm"
+
+
