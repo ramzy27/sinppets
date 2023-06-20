@@ -442,16 +442,56 @@ To test your setup, you can use Postman to generate an access token and send req
 
 With this setup, you have an SSO platform where users log in once through Keycloak, and their
 
+ confirmed as valid, the Spring Boot Application grants access to the Client Application.
 
-Sure, here is the workflow as an enumerated list:
 
-1. The Client Application sends a request to the Spring Boot Application without a token.
-2. The Spring Boot Application rejects the request as it does not contain a token.
-3. The Client Application sends an Authentication Request to Keycloak.
-4. Keycloak utilizes the LDAP User Federation to authenticate the user.
-5. The LDAP Server validates the user and communicates this back to Keycloak.
-6. Keycloak generates a JWT (JSON Web Token) and sends this back to the Client Application.
-7. The Client Application then makes a request to the Spring Boot Application, this time including the JWT.
-8. The Spring Boot Application verifies the JWT with the Public Key of Keycloak.
-9. Keycloak confirms the validity of the token to the Spring Boot Application.
-10. With the token confirmed as valid, the Spring Boot Application grants access to the Client Application.
+Certainly, here's a high-level guide on how you've set up the Single Sign-On (SSO) system using Keycloak, LDAP and Spring Boot. This guide will explain how it has been configured and how it can be used for future applications.
+
+**Configuration of Keycloak SSO:**
+
+1. A realm was created in Keycloak. A realm manages a set of users, credentials, roles, and groups. 
+
+2. An LDAP User Federation provider was added to the realm in Keycloak. This provider was configured to connect to the organization's LDAP server for authentication.
+
+3. A group-ldap-mapper was added to the LDAP User Federation provider configuration. This mapper fetches group membership details from the LDAP server and makes these details available to Keycloak.
+
+4. A client was created in the realm for the Spring Boot Application. The client was configured to use 'confidential' access type and client credentials were generated.
+
+5. A 'groups' protocol mapper was added to the client. This mapper includes the groups a user belongs to in the JWT claim.
+
+**Integration with Spring Boot Application:**
+
+6. Spring Security and OAuth2 were integrated into the Spring Boot Application.
+
+7. The application properties file was updated to include the realm, client id, client secret, and the keycloak server url.
+
+8. The Spring Security configuration was updated to use the Keycloak configuration.
+
+**Usage:**
+
+1. A user sends an authentication request from the client application to Keycloak.
+
+2. Keycloak uses the configured LDAP User Federation to authenticate the user against the LDAP server.
+
+3. Once the user is authenticated, Keycloak issues a JWT which includes the user's groups as claims. This JWT is sent back to the client application.
+
+4. The client application sends a request to the Spring Boot Application, including the JWT.
+
+5. The Spring Boot Application uses Spring Security to validate the JWT against the public key of Keycloak and authorizes the user based on the user's group membership claims in the JWT.
+
+**For Future Applications:**
+
+To onboard a new application, follow these steps:
+
+1. Create a new client in the realm in Keycloak.
+
+2. Add the 'groups' protocol mapper to the client.
+
+3. Configure the new application to use OAuth2 and Spring Security.
+
+4. Update the new application's properties to include the realm, client id, client secret, and the keycloak server url.
+
+5. Update the application's security configuration to use the Keycloak configuration.
+
+The Spring Boot starter you're creating will encapsulate steps 3-5 above and simplify the onboarding of future applications.
+
