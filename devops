@@ -441,3 +441,17 @@ To test your setup, you can use Postman to generate an access token and send req
 ## Conclusion
 
 With this setup, you have an SSO platform where users log in once through Keycloak, and their
+
+
+Sure, here is the workflow as an enumerated list:
+
+1. The Client Application sends a request to the Spring Boot Application without a token.
+2. The Spring Boot Application rejects the request as it does not contain a token.
+3. The Client Application sends an Authentication Request to Keycloak.
+4. Keycloak utilizes the LDAP User Federation to authenticate the user.
+5. The LDAP Server validates the user and communicates this back to Keycloak.
+6. Keycloak generates a JWT (JSON Web Token) and sends this back to the Client Application.
+7. The Client Application then makes a request to the Spring Boot Application, this time including the JWT.
+8. The Spring Boot Application verifies the JWT with the Public Key of Keycloak.
+9. Keycloak confirms the validity of the token to the Spring Boot Application.
+10. With the token confirmed as valid, the Spring Boot Application grants access to the Client Application.
