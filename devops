@@ -350,3 +350,94 @@ With this setup, all applications in the organization will be able to authentica
 With this setup, we have an SSO platform where users log in once through Keycloak, and their LDAP group memberships are used to control access to resources across all our applications. By developing a Spring Boot Starter, we make it easier for future applications to integrate with this platform, enhancing our organization's security and efficiency.
 
 
+Here is a general outline that you can use for creating your Wiki:
+
+# Single Sign-On (SSO) platform using Keycloak, LDAP, and Spring Boot
+
+## Overview
+
+This document provides a guide on how to set up an SSO platform using Keycloak as an Identity and Access Management solution, LDAP as a user directory, and Spring Boot for application development. This combination allows applications to authenticate users once and grant access based on their LDAP group memberships.
+
+## Pre-requisites
+
+- Keycloak Server
+- LDAP Server
+- Spring Boot Application
+- Postman (for testing)
+
+## Keycloak Configuration
+
+### Setting up Realm
+
+1. Log into the Keycloak Admin Console.
+2. From the drop-down list in the top-left corner, select "Add Realm".
+3. Enter a name for your realm (e.g., "Hydr").
+4. Click "Create".
+
+[Include screenshot here]
+
+### User Federation with LDAP
+
+1. In the new realm, go to "User Federation" in the left menu.
+2. Select "ldap" from the "Add provider..." dropdown.
+3. Fill out the settings to match your LDAP server, and click "Save".
+
+[Include screenshot here]
+
+### Group Mapping
+
+1. Still under "User Federation", go to the "Mappers" tab for your LDAP configuration.
+2. Click "Create", and select "group-ldap-mapper".
+3. Fill out the settings to match your LDAP server, and click "Save".
+
+[Include screenshot here]
+
+### Client Configuration
+
+1. Go to "Clients" in the left menu, and click "Create".
+2. Enter a name for your client (e.g., "spring-boot-app").
+3. Fill out the other settings as needed, and click "Save".
+
+[Include screenshot here]
+
+## Spring Boot Configuration
+
+Your Spring Boot application needs to be configured to use Keycloak for authentication. You'll need the `spring-boot-starter-oauth2-resource-server` and `spring-security-oauth2-jose` dependencies in your `pom.xml` or `build.gradle` file. 
+
+Here's an example configuration in `application.properties`:
+
+```
+spring.security.oauth2.resourceserver.jwt.jwk-set-uri=https://<keycloak-url>/auth/realms/<realm>/protocol/openid-connect/certs
+spring.security.oauth2.resourceserver.jwt.issuer-uri=https://<keycloak-url>/auth/realms/<realm>
+```
+
+Replace `<keycloak-url>` with your Keycloak server's URL, and `<realm>` with the name of the realm you created.
+
+In your security configuration, you should define the `JwtDecoder` bean:
+
+```java
+@Bean
+JwtDecoder jwtDecoder(OAuth2ResourceServerProperties properties) {
+    NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(properties.getJwt().getJwkSetUri()).build();
+    jwtDecoder.setJwtValidator(withIssuer(properties.getJwt().getIssuerUri()));
+    return jwtDecoder;
+}
+```
+
+## Testing with Postman
+
+To test your setup, you can use Postman to generate an access token and send requests to your Spring Boot application.
+
+1. To generate an access token, send a `POST` request to `https://<keycloak-url>/auth/realms/<realm>/protocol/openid-connect/token` with these parameters:
+    - `grant_type`: "password"
+    - `client_id`: "<client-id>"
+    - `username`: "<username>"
+    - `password`: "<password>"
+
+2. Copy the access token from the response, and use it as a bearer token in your requests to your Spring Boot application.
+
+[Include screenshot here]
+
+## Conclusion
+
+With this setup, you have an SSO platform where users log in once through Keycloak, and their
