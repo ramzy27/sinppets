@@ -95,3 +95,78 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 When you open Swagger UI, you will see an "Authorize" button, you can click on it and input the necessary OAuth2 credentials to authenticate.
 
 Please be aware that this is just a general guide and you may need to adjust the configuration according to your specific requirements.
+
+
+
+When you use Springdoc OpenAPI, you can integrate OAuth2 into your Swagger UI using the following approach:
+
+First, add the Springdoc OpenAPI UI dependency in your `pom.xml` file:
+
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-ui</artifactId>
+    <version>1.5.2</version>
+</dependency>
+```
+
+Next, configure OAuth2 in your OpenAPI configuration:
+
+```java
+@Configuration
+public class OpenApiConfiguration {
+
+    @Value("${keycloak.auth-server-url}")
+    private String authServerUrl;
+
+    @Value("${keycloak.realm}")
+    private String realm;
+
+    @Value("${keycloak.resource}")
+    private String clientId;
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        final String securitySchemeName = "bearerAuth";
+        return new OpenAPI()
+                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+                .components(
+                        new Components()
+                                .addSecuritySchemes(securitySchemeName,
+                                        new SecurityScheme()
+                                                .name(securitySchemeName)
+                                                .type(SecurityScheme.Type.HTTP)
+                                                .scheme("bearer")
+                                                .bearerFormat("JWT")
+                                                .in(SecurityScheme.In.HEADER)
+                                                .description("JWT Authorization header using the Bearer scheme")
+                                )
+                )
+                .info(new Info().title("Your API Title").version("v1")
+                        .description("Your API Description"));
+    }
+}
+```
+
+This setup will add an "Authorize" button to your Swagger UI, allowing you to authenticate using your OAuth2 credentials.
+
+Please adjust this configuration according to your specific needs.
+
+Regarding accessing Swagger without a bearer token, you would need to make sure that your security configuration is allowing access to the paths that Swagger is using. Please review your security configuration to ensure paths related to Swagger are permitted.
+
+Lastly, remember to update your Spring Security configuration to allow Swagger UI-related paths (replace "/swagger-ui.html" with "/swagger-ui/" if you're using Springdoc OpenAPI). For example:
+
+```java
+@Configuration
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring().antMatchers("/swagger-ui/**",
+                                   "/v3/api-docs/**",
+                                   "/swagger-ui.html",
+                                   "/webjars/**");
+    }
+}
+```
+
