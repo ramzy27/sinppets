@@ -1,0 +1,97 @@
+To integrate OAuth2 into Swagger UI, you can use the following steps:
+
+Firstly, add Swagger UI dependencies in your Maven `pom.xml` file:
+
+```xml
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-swagger2</artifactId>
+    <version>2.9.2</version>
+</dependency>
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-swagger-ui</artifactId>
+    <version>2.9.2</version>
+</dependency>
+```
+
+Secondly, define a `Docket` Bean and configure Swagger UI for OAuth2 in a configuration class:
+
+```java
+@Configuration
+@EnableSwagger2
+public class SwaggerConfig {
+
+    @Value("${keycloak.auth-server-url}")
+    private String authServerUrl;
+
+    @Value("${keycloak.realm}")
+    private String realm;
+
+    @Value("${keycloak.resource}")
+    private String clientId;
+
+    @Bean
+    public Docket api() {
+        return new Docket(DocumentationType.SWAGGER_2)
+            .select()
+            .apis(RequestHandlerSelectors.any())
+            .paths(PathSelectors.any())
+            .build()
+            .securitySchemes(Arrays.asList(securityScheme()))
+            .securityContexts(Arrays.asList(securityContext()));
+    }
+
+    private SecurityScheme securityScheme() {
+        GrantType grantType =
+                new ResourceOwnerPasswordCredentialsGrant(authServerUrl + "/realms/" + realm + "/protocol/openid-connect/token");
+
+        SecurityScheme oauth =
+                new OAuthBuilder()
+                        .name("spring_oauth")
+                        .grantTypes(Arrays.asList(grantType))
+                        .scopes(Arrays.asList(scopes()))
+                        .build();
+        return oauth;
+    }
+
+    private SecurityContext securityContext() {
+        return SecurityContext.builder()
+                .securityReferences(Arrays.asList(new SecurityReference("spring_oauth", scopes())))
+                .forPaths(PathSelectors.any())
+                .build();
+    }
+
+    private AuthorizationScope[] scopes() {
+        AuthorizationScope[] scopes = {
+            new AuthorizationScope("read", "for read operations"),
+            new AuthorizationScope("write", "for write operations"),
+            new AuthorizationScope("trust", "for trust operations")
+        };
+        return scopes;
+    }
+}
+```
+
+Thirdly, allow Swagger UI through your Security configuration:
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring().antMatchers("/v2/api-docs",
+                                   "/configuration/ui",
+                                   "/swagger-resources/**",
+                                   "/configuration/security",
+                                   "/swagger-ui.html",
+                                   "/webjars/**");
+    }
+}
+```
+
+When you open Swagger UI, you will see an "Authorize" button, you can click on it and input the necessary OAuth2 credentials to authenticate.
+
+Please be aware that this is just a general guide and you may need to adjust the configuration according to your specific requirements.
