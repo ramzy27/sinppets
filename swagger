@@ -1,3 +1,39 @@
+@Configuration
+public class OpenApiConfiguration {
+
+    @Value("${spring.security.oauth2.client.provider.keycloak.token-uri}")
+    private String authServerUrl;
+
+    @Value("${spring.security.oauth2.client.registration.keycloak.client-id}")
+    private String clientId;
+
+    @Value("${spring.security.oauth2.client.registration.keycloak.client-secret}")
+    private String clientSecret;
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .addSecurityItem(new SecurityRequirement().addList("OAuth2"))
+                .components(new Components()
+                        .addSecuritySchemes("OAuth2",
+                                new SecurityScheme()
+                                        .type(SecurityScheme.Type.OAUTH2)
+                                        .in(SecurityScheme.In.HEADER)
+                                        .scheme("bearer")
+                                        .flows(new OAuthFlows()
+                                                .password(new OAuthFlow()
+                                                        .tokenUrl(authServerUrl)
+                                                        .authorizationUrl(authServerUrl + "/auth")
+                                                        .addScopesItem("openid", "openid scope")
+                                                        .addScopesItem("profile", "profile scope")
+                                                )
+                                        )
+                        )
+                );
+    }
+}
+
+
 To integrate OAuth2 into Swagger UI, you can use the following steps:
 
 Firstly, add Swagger UI dependencies in your Maven `pom.xml` file:
