@@ -1,3 +1,17 @@
+
+- name: envoy.filters.network.http_connection_manager
+  typed_config:
+    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+    # ... other configs ...
+    forward_client_cert_details: SANITIZE_SET
+    set_current_client_cert_details:
+      cert: true
+      dns: true
+      uri: true
+    use_remote_address: true
+    xff_num_trusted_hops: 1
+
+
 @Configuration
 public class OpenApiConfiguration {
 
