@@ -257,3 +257,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 }
 ```
 
+logging.level.org.springframework.web.servlet.DispatcherServlet=DEBUG
+
+
+Host: proxy.com
+X-Forwarded-Host: proxy.com
+X-Forwarded-Proto: https (or http if your proxy is not using SSL)
+
+
