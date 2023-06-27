@@ -1,3 +1,40 @@
+Before proceeding, it's important to note that not all Kubernetes Ingress Controllers support the `use-forwarded-headers` and `proxy-real-ip-cidr` options. These options are specific to the NGINX Ingress Controller. If you're using a different Ingress Controller, such as the default GCE Ingress Controller in GKE, these options may not be available. 
+
+Assuming you're using the NGINX Ingress Controller, here's how you might modify its ConfigMap:
+
+1. First, find the name of the ConfigMap for the NGINX Ingress Controller. It's often something like `nginx-configuration` or `nginx-config`, but it might vary depending on your setup. You can list all ConfigMaps in the `ingress-nginx` namespace (if that's where your Ingress Controller is installed) with this command:
+
+   ```bash
+   kubectl get configmap -n ingress-nginx
+   ```
+
+2. Once you have the name of the ConfigMap, you can edit it directly with `kubectl edit`:
+
+   ```bash
+   kubectl edit configmap nginx-configuration -n ingress-nginx
+   ```
+
+   This command will open the ConfigMap in your default text editor. Under the `data:` section, add the `use-forwarded-headers` and `proxy-real-ip-cidr` options:
+
+   ```yaml
+   data:
+     use-forwarded-headers: "true"
+     proxy-real-ip-cidr: "0.0.0.0/0"  # replace with your actual trusted IPs
+   ```
+
+   Save and close the file to apply the changes.
+
+3. After editing the ConfigMap, you'll usually need to restart the Ingress Controller's Pods to make them pick up the changes. You can do this by deleting the Pods and letting the Deployment create new ones:
+
+   ```bash
+   kubectl delete pod -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx
+   ```
+
+   Replace `ingress-nginx` with the actual namespace and label of your Ingress Controller's Pods if they're different.
+
+Again, please note that the exact steps might vary depending on your specific setup and the type of Ingress Controller you're using. Always refer to the documentation for your specific Ingress Controller for the most accurate information.
+
+
 resources:
   - "@type": type.googleapis.com/envoy.config.listener.v3.Listener
     name: listener_0
