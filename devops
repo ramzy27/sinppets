@@ -495,3 +495,62 @@ To onboard a new application, follow these steps:
 
 The Spring Boot starter you're creating will encapsulate steps 3-5 above and simplify the onboarding of future applications.
 
+
+
+
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${app}
+  namespace: ${namespace}
+  labels:
+    app: ${app}
+spec:
+  selector:
+    matchLabels:
+      app: ${app}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ${app}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+        seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
+        seccomp.security.alpha.kubernetes.io/container: 'runtime/default'
+    spec:
+      containers:
+        - name: ${app}
+          image: asia.gcr.io/${project}/container/${image}
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "100Mi"
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: PROJECT
+              value: ${project}
+            - name: MANAGEMENT_METRICS_EXPORT_STACKDRIVER_ENABLED
+              value: "false"
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp-volume
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+
+
+
