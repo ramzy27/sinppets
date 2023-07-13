@@ -553,4 +553,4 @@ spec:
           emptyDir: {}
 
 
-
+bq --location=EU mk --dataset --default_kms_key="projects/hsbc-6328774-kms-prod/locations/global/keyRings/bigQuery/cryptoKeys/YourKeyName" "hsbc-8661950-riskstore-prod:RiskEngine"
