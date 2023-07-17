@@ -554,3 +554,38 @@ spec:
 
 
 bq --location=EU mk --dataset --default_kms_key="projects/hsbc-6328774-kms-prod/locations/global/keyRings/bigQuery/cryptoKeys/YourKeyName" "hsbc-8661950-riskstore-prod:RiskEngine"
+
+
+
+In your Jenkins pipeline, you could add an optional parameter to decide whether to promote an image to another project. If this parameter is set to true, the pipeline will copy the image from the dev project to the uat project.
+
+Please modify your pipeline as per the code snippet below:
+
+```groovy
+// Existing parameter definitions...
+booleanParam(name: 'promoteImage', defaultValue: false, description: 'Should the image be promoted to UAT project?')
+
+// The rest of your pipeline...
+
+stage('Promote Image to UAT') {
+    when { expression { params.promoteImage == true } }
+    steps {
+        script {
+            def sourceImage = "gcr.io/${project}/location/${params.serviceName}"
+            def targetImage = "gcr.io/uat-project-id/location/${params.serviceName}"  // Replace uat-project-id and location accordingly
+            
+            sh "gcloud config configurations activate uat-config"  // Switch to the UAT project configuration
+            sh "docker pull ${sourceImage}"
+            sh "docker tag ${sourceImage} ${targetImage}"
+            sh "docker push ${targetImage}"
+        }
+    }
+}
+```
+In this example:
+
+- `uat-project-id` and `location` should be replaced with your actual UAT project ID and location respectively.
+- A new boolean parameter `promoteImage` has been added to determine whether the image should be promoted to the UAT project.
+- A new stage 'Promote Image to UAT' has been added. This stage will only run if the `promoteImage` parameter is set to true. It switches to the UAT project configuration, pulls the image from the dev project, tags it for the UAT project, and then pushes it to the UAT project.
+
+Please adjust the pipeline as necessary to fit your specific use case. The pipeline assumes that you've already authenticated to GCP and configured Docker to use `gcloud` as a credential helper on your Jenkins agent(s), and that `uat-config` is a `gcloud` configuration for your UAT project.
