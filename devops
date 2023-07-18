@@ -629,3 +629,21 @@ MEMBER="serviceAccount:image-run@hsbc.com"
 
 # Add role to service account at the dataset level
 gcloud alpha bigquery iam set-policy $DATASET_ID --project=$PROJECT_ID --add="role=$ROLE:member=$MEMBER"
+
+#!/bin/bash
+
+# Variables
+PROJECT_ID="your-project-id"
+DATASET_ID="your-dataset-id"
+ROLE="roles/bigquery.dataOwner"
+MEMBER="serviceAccount:image-run@hsbc.com"
+
+# Get the current IAM policy, save it to a JSON file
+bq show --format=prettyjson --project_id=$PROJECT_ID $DATASET_ID > policy.json
+
+# Use jq to add the new role to the policy file
+jq '.access += [{"role": "'"$ROLE"'", "userByEmail": "'"$MEMBER"'"}]' policy.json > updated_policy.json
+
+# Update the IAM policy
+bq update --source=updated_policy.json --project_id=$PROJECT_ID $DATASET_ID
+
