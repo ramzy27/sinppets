@@ -589,3 +589,31 @@ In this example:
 - A new stage 'Promote Image to UAT' has been added. This stage will only run if the `promoteImage` parameter is set to true. It switches to the UAT project configuration, pulls the image from the dev project, tags it for the UAT project, and then pushes it to the UAT project.
 
 Please adjust the pipeline as necessary to fit your specific use case. The pipeline assumes that you've already authenticated to GCP and configured Docker to use `gcloud` as a credential helper on your Jenkins agent(s), and that `uat-config` is a `gcloud` configuration for your UAT project.
+
+
+In your case, where you're already using Spring Boot and GCP Secret Manager, it makes sense to leverage the Spring Cloud GCP Secret Manager integration, especially since it fits well with Spring Boot's way of handling configuration.
+
+As for the Jenkins pipeline injecting environment variables, the main advantage is generally when you have multiple environments (like dev, staging, production) and you want to use different values for each environment without having to rebuild your application's Docker image. However, in your case, Spring Boot's profile feature can achieve the same goal with arguably more simplicity and elegance.
+
+To leverage Spring Cloud GCP Secret Manager, you'll want to add the corresponding dependencies in your `pom.xml` or `build.gradle` file. Then, you can access your secrets directly in your properties or YAML files using the `sm://<secret-id>` syntax.
+
+Here's an example for a `pom.xml`:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-gcp-starter-secretmanager</artifactId>
+    </dependency>
+</dependencies>
+```
+
+And in your `application-{profile}.properties` or `application-{profile}.yml` file, you can use:
+
+```yml
+my.secret.property: sm://my-secret-id
+```
+
+Remember to replace `my-secret-id` with the actual ID of your secret. At runtime, Spring Boot will fetch the secret from GCP Secret Manager and inject it into `my.secret.property`.
+
+With this setup, you're using the tools provided by Spring Boot and GCP to manage your secrets in a secure and straightforward way, without the need for Jenkins to inject environment variables.
