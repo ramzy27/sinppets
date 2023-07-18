@@ -617,3 +617,15 @@ my.secret.property: sm://my-secret-id
 Remember to replace `my-secret-id` with the actual ID of your secret. At runtime, Spring Boot will fetch the secret from GCP Secret Manager and inject it into `my.secret.property`.
 
 With this setup, you're using the tools provided by Spring Boot and GCP to manage your secrets in a secure and straightforward way, without the need for Jenkins to inject environment variables.
+
+
+#!/bin/bash
+
+# Variables
+PROJECT_ID="your-project-id"
+DATASET_ID="your-dataset-id"
+ROLE="roles/bigquery.dataOwner"
+MEMBER="serviceAccount:image-run@hsbc.com"
+
+# Add role to service account at the dataset level
+gcloud alpha bigquery iam set-policy $DATASET_ID --project=$PROJECT_ID --add="role=$ROLE:member=$MEMBER"
