@@ -1,4 +1,4 @@
-etLet's break this down into several parts:
+loetLet's break this down into several parts:
 
 **1. Modify `pom.xml` in your Spring Boot application:**
 
@@ -651,11 +651,11 @@ bq update --source=updated_policy.json --project_id=$PROJECT_ID $DATASET_ID
 
 pipeline {
     agent any
-    environment {
-        PROJECT_ID = 'your-project-id'
-        DATASET_ID = 'your-dataset-id'
-        ROLE = 'roles/bigquery.dataOwner'
-        MEMBER = 'serviceAccount:image-run@hsbc.com'
+    parameters {
+        string(name: 'PROJECT_ID', defaultValue: 'your-project-id', description: 'Project ID')
+        string(name: 'DATASET_ID', defaultValue: 'your-dataset-id', description: 'Dataset ID')
+        string(name: 'ROLE', defaultValue: 'roles/bigquery.dataOwner', description: 'Role')
+        string(name: 'MEMBER', defaultValue: 'serviceAccount:image-run@hsbc.com', description: 'Service Account Email')
     }
     stages {
         stage('Get current policy') {
@@ -667,7 +667,7 @@ pipeline {
             steps {
                 sh '''python -c "import json; \
                     policy = json.load(open('policy.json')); \
-                    policy['access'].append({'role':'$ROLE', 'userByEmail':'$MEMBER'}); \
+                    policy['access'].append({'role':'${ROLE}', 'userByEmail':'${MEMBER}'}); \
                     json.dump(policy, open('updated_policy.json', 'w'))"
                 '''
             }
@@ -679,5 +679,3 @@ pipeline {
         }
     }
 }
-
-
