@@ -700,3 +700,50 @@ json.dump(policy, open('updated_policy.json', 'w'))"
 
 # Update the IAM policy
 bq update --source=updated_policy.json --project_id=$PROJECT_ID $DATASET_ID
+
+
+
+pipeline {
+    agent any
+    parameters {
+        string(name: 'PROJECT_ID', defaultValue: 'your-project-id', description: 'Project ID')
+        string(name: 'DATASET_ID', defaultValue: 'your-dataset-id', description: 'Dataset ID')
+        string(name: 'ROLE', defaultValue: 'roles/bigquery.dataOwner', description: 'Role')
+        string(name: 'MEMBER', defaultValue: 'member@example.com', description: 'Member email')
+        string(name: 'ENV_JSON', defaultValue: 'env.json', description: 'Environment JSON')
+    }
+    stages {
+        stage('Load Environment Variables and Authenticate to GCP') {
+            steps {
+                script {
+                    envVars = readJSON file: "${params.ENV_JSON}"
+                    env.SERVICE_ACCOUNT_KEY_FILENAME = envVars['service_account_key_filename']
+                    env.PROJECT_ID = envVars['project_id']
+                }
+                withCredentials([file(credentialsId: "${envVars['jenkins_credential_id']}", variable: 'GCLOUD_KEY')]) {
+                    sh "echo $GCLOUD_KEY > key.json"
+                    sh "gcloud auth activate-service-account --key-file=key.json --project=$PROJECT_ID"
+                }
+            }
+        }
+        stage('Get current policy') {
+            steps {
+                sh "bq show --format=prettyjson --project_id=$PROJECT_ID $DATASET_ID > policy.json"
+            }
+        }
+        stage('Update policy') {
+            steps {
+                sh '''python -c "import json; \
+                    policy = json.load(open('policy.json')); \
+                    policy['access'].append({'role':'${ROLE}', 'userByEmail':'${MEMBER}'}); \
+                    json.dump(policy, open('updated_policy.json', 'w'))"
+                '''
+            }
+        }
+        stage('Apply updated policy') {
+            steps {
+                sh "bq update --source updated_policy.json $PROJECT_ID:$DATASET_ID"
+            }
+        }
+    }
+}
