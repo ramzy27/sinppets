@@ -26,4 +26,34 @@ kubectl get namespaces
 gcloud config configurations activate config-name  # Replace with your config name
 kubectl config use-context gke_project-id_region_cluster-name  # Replace with your project id, region, and cluster name
 
+#!/bin/bash
+
+# Set variables
+CONFIG_NAME="config-name"  # Replace with your config name
+PROJECT_ID="project-id"  # Replace with your project id
+CLUSTER_NAME="cluster-name"  # Replace with your cluster name
+REGION="region"  # Replace with your region
+SERVICE_ACCOUNT="service-account"  # Replace with your service account
+PROXY_URL="http://ingress.${CLUSTER_NAME}.hsbc-${PROJECT_ID}-gbmeqcomp-dev.dev.gcp.cloud.uk.hsbc:3128" # Replace with your proxy URL
+
+# Create a new gcloud configuration
+gcloud config configurations create ${CONFIG_NAME}
+
+# Set gcloud configuration
+gcloud config set proxy/address googleapis-dev.gcp.cloud.hk.hsbc
+gcloud config set proxy/port 3128
+gcloud config set proxy/type http_no_tunnel
+gcloud config set project ${PROJECT_ID}
+gcloud config set auth/impersonate_service_account ${SERVICE_ACCOUNT}
+
+# Get Kubernetes credentials
+gcloud container clusters get-credentials ${CLUSTER_NAME} --region ${REGION}
+
+# Set kubectl config
+kubectl config set clusters.gke_hsbc-${PROJECT_ID}-riskstore-dev_${REGION}_${CLUSTER_NAME}.proxy-url ${PROXY_URL}
+
+# Print all Kubernetes namespaces
+kubectl get namespaces
+
+
 
