@@ -56,4 +56,7 @@ kubectl config set clusters.gke_hsbc-${PROJECT_ID}-riskstore-dev_${REGION}_${CLU
 kubectl get namespaces
 
 
+logging:
+  level:
+    com.google.cloud.spring.secretmanager: DEBUG
 
