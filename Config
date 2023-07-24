@@ -60,3 +60,18 @@ logging:
   level:
     com.google.cloud.spring.secretmanager: DEBUG
 
+
+
+import subprocess
+
+def copyImage(promote_from_project, __PROJECT__, _IMAGE_LOCATION__, __IMAGE_NAMESPACE__, __IMAGE_NAME__, __IMAGE_TAG__):
+    __SOURCE_IMAGE__ = f"{_IMAGE_LOCATION__}/{promote_from_project}/{__IMAGE_NAMESPACE__}/{__IMAGE_NAME__}:{__IMAGE_TAG__}"
+    __TARGET_IMAGE__ = f"{_IMAGE_LOCATION__}/{__PROJECT__}/{__IMAGE_NAMESPACE__}/{__IMAGE_NAME__}:{__IMAGE_TAG__}"
+
+    return_output = ""
+    return_output += subprocess.getoutput(f"docker pull {__SOURCE_IMAGE__}")
+    return_output += subprocess.getoutput(f"docker tag {__SOURCE_IMAGE__} {__TARGET_IMAGE__}")
+    return_output += subprocess.getoutput(f"docker push {__TARGET_IMAGE__}")
+
+    return return_output
+
