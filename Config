@@ -1,4 +1,4 @@
-#!/bin/bash
+se#!/bin/bash
 
 # Set variables
 CONFIG_NAME="config-name"  # Replace with your config name
@@ -27,6 +27,19 @@ gcloud config configurations activate config-name  # Replace with your config na
 kubectl config use-context gke_project-id_region_cluster-name  # Replace with your project id, region, and cluster name
 
 #!/bin/bash
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Forwarded-Host $host;
+      proxy_set_header X-Forwarded-Proto $scheme;
+  name: your-ingress
+  namespace: your-namespace
+spec:
+  ...
 
 # Set variables
 CONFIG_NAME="config-name"  # Replace with your config name
@@ -74,4 +87,46 @@ def copyImage(promote_from_project, __PROJECT__, _IMAGE_LOCATION__, __IMAGE_NAME
     return_output += subprocess.getoutput(f"docker push {__TARGET_IMAGE__}")
 
     return return_output
+
+You can add these annotations directly to the Ingress resource YAML file, then apply the changes using `kubectl`.
+
+1. First, you would add the annotations to your Ingress resource file. Here's an example:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Forwarded-Host $host;
+      proxy_set_header X-Forwarded-Proto $scheme;
+  name: your-ingress
+  namespace: your-namespace
+spec:
+  ...
+```
+
+2. Then you would apply the changes using `kubectl`. Save your file (let's call it `ingress.yaml`), then apply the changes with this command:
+
+```bash
+kubectl apply -f ingress.yaml
+```
+
+Note: Make sure to replace `your-ingress` and `your-namespace` with the actual name of your Ingress resource and the namespace it's in.
+
+Alternatively, you can also edit the existing Ingress resource directly using `kubectl edit`. Here is how you would do it:
+
+1. Use the following command to edit the Ingress:
+
+```bash
+kubectl edit ingress your-ingress -n your-namespace
+```
+
+2. This will open the existing Ingress configuration in your default text editor. Add the annotations under the `metadata:` section, then save and close the file. The changes will be applied immediately.
+
+As of my knowledge cutoff in September 2021, the Google Cloud Console (web UI) does not support editing the raw YAML of Kubernetes resources. So, while you can view the YAML for a resource, you can't directly edit it. You would need to use `kubectl` or another Kubernetes client to apply these changes.
+
+Remember to replace "your-ingress" and "your-namespace" with the actual name of your Ingress and the namespace it's in.
+
+
 
