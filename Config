@@ -173,3 +173,7 @@ FilterRegistrationBean<ForwardedHeaderFilter> forwardedHeaderFilter() {
 
     return registration;
 }
+
+nginx.ingress.kubernetes.io/configuration-snippet: |
+  proxy_set_header X-Forwarded-Host $http_x_forwarded_host;
+  proxy_set_header X-Forwarded-Proto $http_x_forwarded_pro
