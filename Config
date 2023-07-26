@@ -163,3 +163,13 @@ public class LoggingFilter implements Filter {
     }
 }
 
+@Bean
+FilterRegistrationBean<ForwardedHeaderFilter> forwardedHeaderFilter() {
+    ForwardedHeaderFilter filter = new ForwardedHeaderFilter();
+    filter.setRemoveOnly(true);  // This line prevents the filter from using X-Forwarded-* headers to adjust the request.
+
+    FilterRegistrationBean<ForwardedHeaderFilter> registration = new FilterRegistrationBean<>(filter);
+    registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+
+    return registration;
+}
