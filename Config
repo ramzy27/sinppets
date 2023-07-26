@@ -129,4 +129,37 @@ As of my knowledge cutoff in September 2021, the Google Cloud Console (web UI) d
 Remember to replace "your-ingress" and "your-namespace" with the actual name of your Ingress and the namespace it's in.
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.Enumeration;
+
+@Component
+public class LoggingFilter implements Filter {
+
+    private static final Logger logger = LoggerFactory.getLogger(LoggingFilter.class);
+
+    @Override
+    public void doFilter(
+      ServletRequest request, 
+      ServletResponse response, 
+      FilterChain chain) throws IOException, ServletException {
+        
+        HttpServletRequest req = (HttpServletRequest) request;
+        Enumeration<String> headerNames = req.getHeaderNames();
+
+        if (headerNames != null) {
+                while (headerNames.hasMoreElements()) {
+                    String name = headerNames.nextElement();
+                    logger.info("Header: " + name + " = " + req.getHeader(name));
+                }
+        }
+
+        chain.doFilter(request, response);
+    }
+}
 
