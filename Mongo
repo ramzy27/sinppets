@@ -1,4 +1,4 @@
-db.EPI.aggregate([
+dedb.EPI.aggregate([
    {
       $match: {
          quantity: {$ne: 0}
@@ -309,3 +309,31 @@ db.risk.aggregate([
     }
   }
 ])
+
+
+db.RiskResult.aggregate([
+  {
+    $match: {
+      "aggregationLevel": "Position",
+      "position.epi": 17472,
+      "rolldate": {
+        $gte: 20230720, // Adjust this to the start date of last week
+        $lte: 20230727  // Adjust this to the end date of last week
+      },
+      "riskScenario.spotShift": 0.0,
+      "riskScenario.volShift": 0.0
+    }
+  },
+  { $unwind: "$metrics" },
+  {
+    $match: {
+      "metrics.k": "mtm"
+    }
+  },
+  {
+    $project: {
+      mtm: "$metrics.v"
+    }
+  }
+]);
+
