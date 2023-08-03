@@ -337,3 +337,25 @@ db.RiskResult.aggregate([
   }
 ]);
 
+
+db.RiskResult.find({
+  "aggregationLevel": "Position",
+  "position.epi": 17472,
+  "rolldate": {
+    $gte: 20230720, // Adjust this to the start date of last week
+    $lte: 20230727  // Adjust this to the end date of last week
+  },
+  "riskScenario.spotShift": 0.0,
+  "riskScenario.volShift": 0.0
+},
+{
+  _id: 0,
+  rolldate: 1,
+  metrics: {
+    $elemMatch: {
+      "k": "mtm"
+    }
+  }
+});
+
+
