@@ -747,3 +747,42 @@ pipeline {
         }
     }
 }
+
+
+pipeline {
+    agent any 
+
+    parameters {
+        string(name: 'SECRET_NAME', description: 'Name of the secret')
+        password(name: 'SECRET_VALUE', description: 'Value of the secret')
+    }
+
+    environment {
+        LOCATION1 = 'europe-west1'
+        LOCATION2 = 'europe-west2'
+        KMS_KEY = 'projects/hscb-213-kms-prod/locations/europe-west2/keyRings/sm/cryptoKeys/HSMsmSharedKey'
+    }
+
+    stages {
+        stage('Create Secret in GCP') {
+            steps {
+                script {
+                    // Use the parameters provided by the user
+                    sh """
+                        echo -n \$SECRET_VALUE | gcloud secrets create \$SECRET_NAME \\
+                        --data-file=- \\
+                        --replication-policy "user-managed" \\
+                        --locations \$LOCATION1 \$LOCATION2 \\
+                        --kms-key "\$KMS_KEY"
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            // Add logic to handle failure, such as sending a notification.
+        }
+    }
+}
