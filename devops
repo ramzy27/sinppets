@@ -705,84 +705,54 @@ bq update --source=updated_policy.json --project_id=$PROJECT_ID $DATASET_ID
 
 pipeline {
     agent any
+
     parameters {
-        string(name: 'PROJECT_ID', defaultValue: 'your-project-id', description: 'Project ID')
-        string(name: 'DATASET_ID', defaultValue: 'your-dataset-id', description: 'Dataset ID')
-        string(name: 'ROLE', defaultValue: 'roles/bigquery.dataOwner', description: 'Role')
-        string(name: 'MEMBER', defaultValue: 'member@example.com', description: 'Member email')
-        string(name: 'ENV_JSON', defaultValue: 'env.json', description: 'Environment JSON')
+        string(name: 'SECRET_NAME', description: 'The name of the secret')
+        password(name: 'SECRET_VALUE', description: 'The value of the secret')
     }
+
     stages {
-        stage('Load Environment Variables and Authenticate to GCP') {
+        stage('Create Secret in GCP Secret Manager') {
             steps {
                 script {
-                    envVars = readJSON file: "${params.ENV_JSON}"
-                    env.SERVICE_ACCOUNT_KEY_FILENAME = envVars['service_account_key_filename']
-                    env.PROJECT_ID = envVars['project_id']
+                    // Set the environment variables for the gcloud command
+                    env.SECRET_NAME = params.SECRET_NAME
+                    env.SECRET_VALUE = params.SECRET_VALUE
+                    env.KMS_KEY = 'projects/my-project/locations/my-location/keyRings/my-keyring/cryptoKeys/my-key'
+                    env.SERVICE_ACCOUNT = 'jenkins@my-project.iam.gserviceaccount.com'
+
+                    // Run the gcloud command to create the secret
+                    sh '''
+                        gcloud auth activate-service-account --key-file=${SERVICE_ACCOUNT}
+                        echo ${SECRET_VALUE} | gcloud secrets create ${SECRET_NAME} \
+                            --data-file=- \
+                            --replication-policy-file=replication_policy.json
+                    '''
                 }
-                withCredentials([file(credentialsId: "${envVars['jenkins_credential_id']}", variable: 'GCLOUD_KEY')]) {
-                    sh "echo $GCLOUD_KEY > key.json"
-                    sh "gcloud auth activate-service-account --key-file=key.json --project=$PROJECT_ID"
-                }
-            }
-        }
-        stage('Get current policy') {
-            steps {
-                sh "bq show --format=prettyjson --project_id=$PROJECT_ID $DATASET_ID > policy.json"
-            }
-        }
-        stage('Update policy') {
-            steps {
-                sh '''python -c "import json; \
-                    policy = json.load(open('policy.json')); \
-                    policy['access'].append({'role':'${ROLE}', 'userByEmail':'${MEMBER}'}); \
-                    json.dump(policy, open('updated_policy.json', 'w'))"
-                '''
-            }
-        }
-        stage('Apply updated policy') {
-            steps {
-                sh "bq update --source updated_policy.json $PROJECT_ID:$DATASET_ID"
             }
         }
     }
 }
 
 
-pipeline {
-    agent any 
-
-    parameters {
-        string(name: 'SECRET_NAME', description: 'Name of the secret')
-        password(name: 'SECRET_VALUE', description: 'Value of the secret')
-    }
-
-    environment {
-        LOCATION1 = 'europe-west1'
-        LOCATION2 = 'europe-west2'
-        KMS_KEY = 'projects/hscb-213-kms-prod/locations/europe-west2/keyRings/sm/cryptoKeys/HSMsmSharedKey'
-    }
-
-    stages {
-        stage('Create Secret in GCP') {
-            steps {
-                script {
-                    // Use the parameters provided by the user
-                    sh """
-                        echo -n \$SECRET_VALUE | gcloud secrets create \$SECRET_NAME \\
-                        --data-file=- \\
-                        --replication-policy "user-managed" \\
-                        --locations \$LOCATION1 \$LOCATION2 \\
-                        --kms-key "\$KMS_KEY"
-                    """
-                }
-            }
+{
+  "replication": {
+    "userManaged": {
+      "replicas": [
+        {
+          "location": "europe-west2",
+          "customerManagedEncryption": {
+            "kmsKeyName": "projects/my-project/locations/my-location/keyRings/my-keyring/cryptoKeys/my-key"
+          }
+        },
+        {
+          "location": "europe-west1",
+          "customerManagedEncryption": {
+            "kmsKeyName": "projects/my-project/locations/my-location/keyRings/my-keyring/cryptoKeys/my-key"
+          }
         }
+      ]
     }
-
-    post {
-        failure {
-            // Add logic to handle failure, such as sending a notification.
-        }
-    }
+  }
 }
+
