@@ -756,3 +756,36 @@ pipeline {
   }
 }
 
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'SECRET_NAME', description: 'The name of the secret')
+        password(name: 'SECRET_VALUE', description: 'The value of the secret')
+    }
+
+    stages {
+        stage('Create Secret in GCP Secret Manager') {
+            steps {
+                script {
+                    // Set the environment variables for the gcloud command
+                    env.SECRET_NAME = params.SECRET_NAME
+                    env.SECRET_VALUE = params.SECRET_VALUE
+                    env.KMS_KEY = 'projects/my-project/locations/my-location/keyRings/my-keyring/cryptoKeys/my-key'
+                    env.SERVICE_ACCOUNT = 'jenkins@my-project.iam.gserviceaccount.com'
+
+                    // Run the gcloud command to create the secret
+                    sh '''
+                        gcloud auth activate-service-account --key-file=${SERVICE_ACCOUNT}
+                        echo ${SECRET_VALUE} | gcloud secrets create ${SECRET_NAME} \
+                            --data-file=- \
+                            --replication-policy=user-managed
+
+                        gcloud secrets replicas create --secret=${SECRET_NAME} --location=europe-west2 --kms-key-name=${KMS_KEY}
+                        gcloud secrets replicas create --secret=${SECRET_NAME} --location=europe-west1 --kms-key-name=${KMS_KEY}
+                    '''
+                }
+            }
+        }
+    }
+}
