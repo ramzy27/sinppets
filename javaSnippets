@@ -1,1 +1,20 @@
 
+public Set<Integer> getAllSophisChildrenCode(String folio) {
+
+    final Map<Integer, SophisPortfolio> sophisPortfoliosMap = portfolioService.getSophisPortfoliosMap();
+
+    Set<Integer> sophisFolios = portfolioService.getSophisChildrenCodes(folio);
+
+    Set<Integer> allFolios = new HashSet<>(sophisFolios);  // Create a new set and add the initial sophisFolios
+
+    allFolios.addAll(
+        sophisFolios.stream()
+            .filter(sophisPortfoliosMap::containsKey)
+            .map(sophisPortfoliosMap::get)
+            .map(SophisPortfolio::getAllChildren)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toSet())
+    );
+
+    return allFolios;
+}
