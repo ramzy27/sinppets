@@ -302,3 +302,32 @@ X-Forwarded-Host: proxy.com
 X-Forwarded-Proto: https (or http if your proxy is not using SSL)
 
 
+@Configuration
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Value("#{'${allowed.roles}'.split(',')}")
+    private List<String> allowedRoles;
+
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests()
+            .antMatchers("/**").access("hasAnyRole(@allowedRoles)")
+            .and()
+            // Other configurations ...
+
+            // Expose the allowedRoles list as a bean to be accessible in SpEL
+            .expressionHandler(webSecurityExpressionHandler());
+    }
+
+    @Bean
+    public WebSecurityExpressionHandler webSecurityExpressionHandler() {
+        DefaultWebSecurityExpressionHandler handler = new DefaultWebSecurityExpressionHandler();
+        handler.setApplicationContext(applicationContext);
+        return handler;
+    }
+
+    @Autowired
+    private ApplicationContext applicationContext;
+}
