@@ -1,0 +1,16 @@
+"Task","Description","Estimated Days"
+"1. Server-Side Pagination","Due to BigQuery's limitation of 10MB results, server-side pagination is inevitable.",
+"1.1 Enable Pagination in Backend","Activate and validate existing pagination logic in the Spring backend.",1.0
+"1.2 Adjust Frontend for Pagination","Make necessary modifications in Angular with AG Grid to handle paginated data.",0.5
+"2. Server-Side Sorting","Due to BigQuery's limitation, server-side sorting is required.",
+"2.1 Backend Sorting","Interpret and apply sorting in the backend.",0.5
+"2.2 Frontend Sorting","Send sorting parameters from the frontend.",0.5
+"3. Server-Side Filtering","BigQuery's limitations make server-side filtering necessary.",
+"3.1 Backend Filtering","Interpret and apply filters in the backend.",1.0
+"3.2 Frontend Filtering","Send filter parameters from the frontend.",0.5
+"4. Server-Side Aggregations","Implement and adjust aggregations.",
+"4.1 Backend Aggregations","Create logic for aggregations in the backend.",2.0
+"4.2 Frontend Aggregations","Adjust frontend to interpret aggregated data.",1.0
+"5. Modifications for Snap Filter and SQL Adjustments","",
+"5.2 Change Table Name and Adjust SQL","Reflect changes in the DAO or repository layer and adjust SQL queries.",1.5
+"5.1 Remove Snap Filter from GUI and Model","Update components, templates, and related logic.",1.0
