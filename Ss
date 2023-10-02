@@ -1,0 +1,29 @@
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+
+public class DateToExcelSerial {
+
+    public static void main(String[] args) {
+        int dateInt = 20230920; // Example date in yyyymmdd format
+        int excelSerialDate = convertToExcelSerialDate(dateInt);
+        System.out.println("Excel Serial Date: " + excelSerialDate);
+    }
+
+    public static int convertToExcelSerialDate(int dateInt) {
+        String dateStr = Integer.toString(dateInt);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        LocalDate inputDate = LocalDate.parse(dateStr, formatter);
+        
+        // Excel's epoch starts from 1900-01-01, but it incorrectly assumes 1900 is a leap year.
+        // So, we need to account for this by subtracting 1 for dates after 1900-02-28.
+        LocalDate excelEpoch = LocalDate.of(1900, 1, 1);
+        long daysBetween = ChronoUnit.DAYS.between(excelEpoch, inputDate);
+        
+        if (inputDate.isAfter(LocalDate.of(1900, 2, 28))) {
+            daysBetween -= 1;
+        }
+        
+        return (int) daysBetween + 2; // +1 for the epoch itself and +1 for Excel's leap year bug
+    }
+}
