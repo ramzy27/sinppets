@@ -1,0 +1,95 @@
+Certainly. Here's a bullet-point breakdown of the entire design discussion:
+
+---
+
+### **API Implementation for BigQuery to Parquet in GCS**:
+
+1. **Extract Data from BigQuery & Store in GCS (Parquet Format)**:
+    - Utilize Google Cloud Dataflow.
+    - Set up a pipeline using Apache Beam SDK.
+    - Read data using `beam.io.ReadFromBigQuery`.
+    - Convert data to Parquet using Apache Beam transforms.
+    - Store in GCS via `beam.io.WriteToParquet`.
+
+2. **API for Data Exposure**:
+    - Use Google Cloud Functions.
+    - Retrieve the Parquet file from GCS in the function.
+    - Return the file as an API response.
+
+3. **API Endpoint & Security**:
+    - Use HTTP endpoint for the Cloud Function.
+    - Implement security (Cloud Endpoints or Firebase Authentication).
+
+4. **Orchestration**:
+    - Use Cloud Scheduler for Dataflow job intervals.
+    - Optionally, trigger Dataflow on certain conditions.
+
+5. **Error Handling & Monitoring**:
+    - Integrate with Stackdriver for monitoring.
+    - Handle potential errors in both Dataflow and the Cloud Function.
+
+6. **Optimizations**:
+    - Consider GCS partitioning for performance.
+    - Implement Cloud CDN for caching.
+
+7. **Alternatives**:
+    - Google Cloud Dataproc with Spark as an alternative to Dataflow.
+
+8. **Cost Management**:
+    - Monitor GCP billing dashboard.
+    - Clean older Parquet files in GCS to manage storage costs.
+
+---
+
+### **Exposing Big Parquet Results via REST**:
+
+- **File Size Considerations**:
+    - Large transfers can be slow.
+    - Bandwidth considerations for server and client.
+
+- **Streaming**:
+    - **Advantages**:
+        - Immediate access.
+        - Direct data from API.
+        - Avoids temporary storage.
+    - **Disadvantages**:
+        - Potential long transfer times.
+        - Server strain with large files/concurrent requests.
+    - **Use Case**:
+        - Direct and immediate data access needs.
+
+- **Signed URL**:
+    - **Advantages**:
+        - Offloaded data transfer to storage service.
+        - Scalability and resumable downloads.
+        - Controlled, temporary access.
+    - **Disadvantages**:
+        - Two-step download process.
+        - Potential temporary storage costs.
+        - Risk of URL sharing before expiration.
+    - **Use Case**:
+        - Large files, scalable needs, and controlled access.
+
+---
+
+### **Recommendation**:
+- **Signed URLs** are preferred for:
+    - Large Parquet files.
+    - Scalability.
+    - Offloading data transfer.
+    - Controlled, temporary access.
+
+---
+
+### **Potential Questions & Considerations**:
+1. How often will data in BigQuery be updated?
+2. What is the expected size range of Parquet files?
+3. What is the anticipated request volume for the API?
+4. How will the costs of data transfers and storage be managed?
+5. Are there specific security or compliance requirements for data access?
+6. How will clients handle large data downloads?
+7. Is there a need for versioning or historical data access via the API?
+
+---
+
+This should serve as a structured overview of our discussion. Modify and expand upon it as needed for your draft design document.
