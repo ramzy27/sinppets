@@ -1,4 +1,41 @@
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import reactor.core.publisher.Flux;
 
+@Service
+public class AvroStreamingService {
+    @Autowired
+    private Storage storage; // Inject your Google Cloud Storage client
+
+    public Flux<DataBuffer> streamAvroData(String bucketName, String blobName) {
+        return Flux.create(sink -> {
+            try {
+                BlobId blobId = BlobId.of(bucketName, blobName);
+                Blob blob = storage.get(blobId);
+
+                // Create a buffer factory for creating DataBuffers
+                DefaultDataBufferFactory bufferFactory = new DefaultDataBufferFactory();
+
+                // Read and stream the Avro data in chunks
+                byte[] buffer = new byte[4096]; // Adjust the buffer size as needed
+                int bytesRead;
+                while ((bytesRead = blob.reader().read(buffer)) != -1) {
+                    // Create a DataBuffer from the read bytes
+                    DataBuffer dataBuffer = bufferFactory.wrap(buffer, 0, bytesRead);
+
+                    // Emit the DataBuffer to the Flux sink
+                    sink.next(dataBuffer);
+                }
+
+                // Complete the Flux when done
+                sink.complete();
+            } catch (Exception e) {
+                // Handle exceptions and signal errors to the client
+                sink.error(e);
+            }
+        });
+    }
+}
 @Service
 public class DataExportService {
     @Autowired
