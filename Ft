@@ -1,0 +1,80 @@
+
+@Service
+public class DataExportService {
+    @Autowired
+    private BigQuery bigQuery; // Autowire the BigQuery client
+
+    @Autowired
+    private Storage storage; // Autowire the GCS storage client
+
+    public String exportDataToGcs() throws IOException, InterruptedException {
+        // Define your SQL query
+        String sqlQuery = "SELECT * FROM your_dataset.your_table";
+
+        // Set the GCS bucket and file name
+        String bucketName = "your-gcs-bucket";
+        String fileName = "exported-data.avro";
+
+        // Create a JobConfiguration for the query
+        JobConfigurationQuery queryConfig =
+                JobConfigurationQuery.newBuilder(sqlQuery)
+                        .setDestinationTable(TableId.of("your-project-id", "your_dataset", "temp_table"))
+                        .build();
+
+        // Create a BigQuery job
+        Job job = bigQuery.create(JobInfo.of(queryConfig));
+
+        // Wait for the job to complete
+        job = job.waitFor();
+
+        if (job.getStatus().getError() != null) {
+            throw new RuntimeException("BigQuery job failed with error: " + job.getStatus().getError());
+        }
+
+        // Export the result to GCS
+        TableId tableId = job.getConfiguration().getQuery().getDestinationTable();
+        String destinationUri = "gs://" + bucketName + "/" + fileName;
+
+        ExtractJobConfiguration extractConfig =
+                ExtractJobConfiguration.newBuilder(tableId, destinationUri)
+                        .setFormatOptions(FormatOptions.avro())
+                        .build();
+
+        Job extractJob = bigQuery.create(JobInfo.of(extractConfig));
+        extractJob = extractJob.waitFor();
+
+        if (extractJob.getStatus().getError() != null) {
+            throw new RuntimeException("Export job failed with error: " + extractJob.getStatus().getError());
+        }
+
+        return fileName; // Return the ID (file name) for later retrieval
+    }
+}
+```
+
+
+@RestController
+@RequestMapping("/api/data-export")
+public class DataExportController {
+    @Autowired
+    private DataExportService dataExportService;
+
+    @PostMapping("/export")
+    public ResponseEntity<String> exportDataToGcs() {
+        try {
+            String fileId = dataExportService.exportDataToGcs();
+            return ResponseEntity.ok(fileId);
+        } catch (IOException | InterruptedException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Export failed: " + e.getMessage());
+        }
+    }
+}
+```
+
+3. **Configure BigQuery and GCS:** Ensure that you have configured your Spring application to use the Google Cloud BigQuery and GCS libraries. You will need to provide credentials and project configuration to access these services.
+
+4. **Configure Routing:** Configure the routing for your Spring application to map the controller's endpoints to URLs.
+
+Now, when you make a POST request to `/api/data-export/export`, it will trigger the export process, and the endpoint will return the ID (file name) that can be used to fetch the exported Avro file from the GCS bucket later. Make sure to replace `"your_dataset.your_table"` and other placeholders with your actual dataset, table, GCS bucket, and project information.
+
+Please ensure that you have the necessary dependencies and configurations for Google Cloud libraries, BigQuery, and GCS in your Spring application.
