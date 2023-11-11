@@ -1,4 +1,43 @@
 
+int bufferSize = 4096; // Adjust the buffer size as needed
+ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+int bytesRead;
+
+try {
+    // Log the start of the reading process
+    System.out.println("Starting to read the Avro file.");
+
+    while (true) {
+        bytesRead = blob.reader().read(buffer);
+
+        // Log the number of bytes read in each iteration
+        System.out.println("Bytes read: " + bytesRead);
+
+        if (bytesRead == -1) {
+            // If bytesRead is -1, then we have reached the end of the stream
+            System.out.println("End of file reached.");
+            break;
+        }
+
+        byte[] byteArray = new byte[bytesRead];
+        buffer.flip();
+        buffer.get(byteArray);
+
+        DataBuffer dataBuffer = bufferFactory.wrap(byteArray);
+        sink.next(dataBuffer);
+        buffer.clear(); // Clear the buffer for the next read
+    }
+
+    // Complete the Flux when done
+    sink.complete();
+    System.out.println("Reading process completed successfully.");
+} catch (Exception e) {
+    // Log the exception if any occurs
+    System.err.println("An error occurred: " + e.getMessage());
+    sink.error(e);
+}
+
+
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import reactor.core.publisher.Flux;
