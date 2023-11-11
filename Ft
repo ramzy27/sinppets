@@ -1,3 +1,15 @@
+@GetMapping("/data")
+public Mono<ResponseEntity<Flux<DataBuffer>>> getData() {
+    Flux<DataBuffer> dataFlux = createDataBufferFlux(); // Replace with your actual data fetching logic
+
+    return Mono.just(ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_OCTET_STREAM) // or MediaType.APPLICATION_JSON if applicable
+            .body(dataFlux))
+        .onErrorResume(e -> Mono.just(
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .build()));
+}
+
 int bufferSize = 4096; // Adjust the buffer size as needed
 ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
 int bytesRead;
