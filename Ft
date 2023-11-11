@@ -1,128 +1,43 @@
-
 int bufferSize = 4096; // Adjust the buffer size as needed
 ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
 int bytesRead;
+long totalBytesRead = 0; // Keep track of the total bytes read
 
 try {
-    // Log the start of the reading process
-    System.out.println("Starting to read the Avro file.");
+    while ((bytesRead = blob.reader().read(buffer)) != -1) {
+        totalBytesRead += bytesRead; // Update the total bytes read
+        System.out.println("Bytes read this iteration: " + bytesRead);
+        System.out.println("Total bytes read: " + totalBytesRead);
 
-    while (true) {
-        bytesRead = blob.reader().read(buffer);
-
-        // Log the number of bytes read in each iteration
-        System.out.println("Bytes read: " + bytesRead);
-
-        if (bytesRead == -1) {
-            // If bytesRead is -1, then we have reached the end of the stream
-            System.out.println("End of file reached.");
+        // Ensure that you do not read past the end of the file
+        if (totalBytesRead >= 312 * 1024) { // 312 KB in bytes
+            System.out.println("Read past the expected file size, breaking out of loop.");
             break;
         }
 
         byte[] byteArray = new byte[bytesRead];
         buffer.flip();
         buffer.get(byteArray);
-
         DataBuffer dataBuffer = bufferFactory.wrap(byteArray);
+
+        // Emit the DataBuffer to the Flux sink
         sink.next(dataBuffer);
-        buffer.clear(); // Clear the buffer for the next read
+
+        // Clear the buffer for the next read
+        buffer.clear();
     }
 
     // Complete the Flux when done
     sink.complete();
     System.out.println("Reading process completed successfully.");
 } catch (Exception e) {
-    // Log the exception if any occurs
-    System.err.println("An error occurred: " + e.getMessage());
+    System.err.println("An error occurred during file reading: " + e.getMessage());
     sink.error(e);
 }
 
 
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import reactor.core.publisher.Flux;
 
-@Service
-public class AvroStreamingService {
-    @Autowired
-    private Storage storage; // Inject your Google Cloud Storage client
 
-    public Flux<DataBuffer> streamAvroData(String bucketName, String blobName) {
-        return Flux.create(sink -> {
-            try {
-                BlobId blobId = BlobId.of(bucketName, blobName);
-                Blob blob = storage.get(blobId);
-
-                // Create a buffer factory for creating DataBuffers
-                DefaultDataBufferFactory bufferFactory = new DefaultDataBufferFactory();
-
-                // Define the buffer size
-                int bufferSize = 4096; // Adjust the buffer size as needed
-
-                // Read and stream the Avro data in chunks
-                ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-                int bytesRead;
-                while ((bytesRead = blob.reader().read(buffer)) != -1) {
-                    // Create a DataBuffer from the read bytes
-                    byte[] byteArray = new byte[bytesRead];
-                    buffer.flip();
-                    buffer.get(byteArray);
-                    DataBuffer dataBuffer = bufferFactory.wrap(byteArray);
-
-                    // Emit the DataBuffer to the Flux sink
-                    sink.next(dataBuffer);
-
-                    // Clear the buffer for the next read
-                    buffer.clear();
-                }
-
-                // Complete the Flux when done
-                sink.complete();
-            } catch (Exception e) {
-                // Handle exceptions and signal errors to the client
-                sink.error(e);
-            }
-        });
-    }
-}
-
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import reactor.core.publisher.Flux;
-
-@Service
-public class AvroStreamingService {
-    @Autowired
-    private Storage storage; // Inject your Google Cloud Storage client
-
-    public Flux<DataBuffer> streamAvroData(String bucketName, String blobName) {
-        return Flux.create(sink -> {
-            try {
-                BlobId blobId = BlobId.of(bucketName, blobName);
-                Blob blob = storage.get(blobId);
-
-                // Create a buffer factory for creating DataBuffers
-                DefaultDataBufferFactory bufferFactory = new DefaultDataBufferFactory();
-
-                // Read and stream the Avro data in chunks
-                byte[] buffer = new byte[4096]; // Adjust the buffer size as needed
-                int bytesRead;
-                while ((bytesRead = blob.reader().read(buffer)) != -1) {
-                    // Create a DataBuffer from the read bytes
-                    DataBuffer dataBuffer = bufferFactory.wrap(buffer, 0, bytesRead);
-
-                    // Emit the DataBuffer to the Flux sink
-                    sink.next(dataBuffer);
-                }
-
-                // Complete the Flux when done
-                sink.complete();
-            } catch (Exception e) {
-                // Handle exceptions and signal errors to the client
-                sink.error(e);
-            }
-        });
-    }
 }
 @Service
 public class DataExportService {
