@@ -1,3 +1,21 @@
+
+import base64
+import json
+
+# Replace this with your JSON array copied from Postman
+json_array = [
+    {"nativeBuffer": "base64encodedstring1=="},
+    {"nativeBuffer": "base64encodedstring2=="}
+]
+
+# Decode each base64 string and concatenate the binary data
+binary_data = b''.join(base64.b64decode(chunk['nativeBuffer']) for chunk in json_array)
+
+# Write the binary data to an Avro file
+with open('output.avro', 'wb') as avro_file:
+    avro_file.write(binary_data)
+
+# Now you can use Avro tools to validate 'output.avro'
 @GetMapping("/data")
 public Mono<ResponseEntity<Flux<DataBuffer>>> getData() {
     Flux<DataBuffer> dataFlux = createDataBufferFlux(); // Replace with your actual data fetching logic
