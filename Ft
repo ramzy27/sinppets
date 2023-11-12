@@ -1,4 +1,55 @@
 
+
+import org.apache.avro.file.DataFileStream;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.BinaryDecoder;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DecoderFactory;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+
+// ...
+
+int bufferSize = 4096; // Adjust the buffer size as needed
+ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+long totalBytesRead = 0; // Keep track of the total bytes read
+
+try {
+    // Instantiate Avro objects for reading records
+    DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+    BinaryDecoder decoder = null;
+
+    try (ReadChannel reader = blob.reader()) {
+        InputStream inputStream = Channels.newInputStream(reader);
+        
+        // We need to read the Avro header first (this code assumes the schema is embedded)
+        DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(inputStream, datumReader);
+        Schema schema = dataFileStream.getSchema();
+        datumReader.setSchema(schema);
+        
+        // Now read the blocks
+        while (dataFileStream.hasNext()) {
+            GenericRecord record = dataFileStream.next();
+            
+            // Serialize the record to a byte array or directly to a DataBuffer
+            // This part depends on how you want to serialize your records
+            byte[] serializedRecord = serializeRecord(record, schema); // Implement this method
+            
+            // Wrap the byte array in a DataBuffer
+            DataBuffer dataBuffer = new DefaultDataBufferFactory().wrap(serializedRecord);
+            
+            // Emit the DataBuffer to the Flux sink
+            sink.next(dataBuffer);
+        }
+    }
+    // Complete the Flux when done
+    sink.complete();
+} catch (Exception e) {
+    sink.error(e);
+}
+
+
 import base64
 import json
 
