@@ -1,0 +1,87 @@
+Certainly! Below is a small documentation template you can use as a starting point to guide users on how to interact with your API. Since I don't have all the specifics of your API, I'll keep it generic; you'll need to fill in the details according to your actual implementation.
+
+---
+
+# Your API Documentation
+
+## Overview
+
+This API allows users to perform dynamic data queries and retrieve results in an efficient manner. Queries are customizable, allowing for specific data aggregation and filtering based on user-defined parameters.
+
+## API Endpoints
+
+### Submit Query
+
+- **Endpoint**: `/api/query/submit`
+- **Method**: `POST`
+- **Description**: Submits a data query for processing.
+- **Body**: JSON object representing the query parameters.
+  
+  **Example**:
+  ```json
+  {
+    "cob": "20231110",
+    "cutoff": "HBEU",
+    "valueCols": [
+      {
+        "field": "Results_PRICE.Value",
+        "aggFunc": "sum"
+      },
+      {
+        "field": "Position_PortfolioPath",
+        "aggFunc": "any_value"
+      }
+    ],
+    "aggregation": ["Position_PortfolioName"],
+    "filterModel": {
+      "Results_Snap": {
+        "filterType": "set",
+        "values": ["EUOTH_EQ"]
+      }
+    }
+  }
+  ```
+- **Response**: A unique identifier for the query or a direct link to download the results.
+
+### Download Query Results
+
+- **Endpoint**: `/api/query/download/{hash}`
+- **Method**: `GET`
+- **Description**: Downloads the results of a previously submitted query.
+- **URL Parameters**:
+  - `hash`: The unique hash of the query, received from the submit query endpoint.
+
+## Query Parameters
+
+### Fields and Aggregations
+
+- **Field Syntax**: Fields are denoted by the table name followed by an underscore (`_`), and then the field name, e.g., `TableName_FieldName`.
+- **Value Columns**: `valueCols` define the fields to be aggregated and the aggregation function to apply.
+- **Aggregation Functions**: Supported functions include `sum`, `count`, `any_value`, etc.
+- **Group By**: Use the `aggregation` field to specify which columns to group the results by.
+
+### Filtering
+
+- **Filter Model**: Define filters within the `filterModel` to narrow down the results based on specific conditions.
+- **Filter Types**: Support for various filter types such as `set`, `range`, `equals`, etc.
+
+## Usage Examples
+
+Here you can provide concrete examples of how to call the API, including the actual `curl` command or programming code snippets that demonstrate the API call and handling of the response.
+
+## Error Handling
+
+Describe common error responses and their meanings, so users know how to troubleshoot issues they may encounter.
+
+- `400 Bad Request`: The query parameters were invalid.
+- `404 Not Found`: No results were found for the given query hash.
+- `500 Internal Server Error`: An unexpected error occurred on the server.
+
+## Best Practices
+
+- **Caching**: Use the hash provided after a query submission to check for existing results before re-submitting a similar query.
+- **Query Efficiency**: Minimize the number of fields and records requested to improve response times.
+
+---
+
+Ensure you replace placeholders with actual values and provide as much detail as necessary for users to effectively use your API. It's always a good practice to have your documentation reviewed for clarity and completeness by an API user or a developer who is not familiar with your API.
