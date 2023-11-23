@@ -1,5 +1,35 @@
 
+   @PostMapping("/convert-avro-to-json")
+    public Flux<String> convertAvroToJson(@RequestBody List<Map<String, String>> encodedAvroDataList) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
+        try {
+            for (Map<String, String> encodedAvroData : encodedAvroDataList) {
+                String base64Data = encodedAvroData.get("nativeBuffer");
+                byte[] decodedBytes = Base64.getDecoder().decode(base64Data);
+                outputStream.write(decodedBytes);
+            }
+        } catch (Exception e) {
+            // Handle exception (e.g., IOException or decoding error)
+            return Flux.error(e);
+        }
+
+        byte[] avroBytes = outputStream.toByteArray();
+        SeekableByteArrayInput byteArrayInput = new SeekableByteArrayInput(avroBytes);
+
+        return Flux.create(sink -> {
+            try (DataFileReader<GenericRecord> dataFileReader = new DataFileReader<>(byteArrayInput, new GenericDatumReader<>())) {
+                while (dataFileReader.hasNext()) {
+                    GenericRecord record = dataFileReader.next();
+                    sink.next(record.toString()); // Convert the GenericRecord to JSON string
+                }
+                sink.complete();
+            } catch (Exception e) {
+                sink.error(e);
+            }
+        });
+    }
+}
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericDatumReader;
