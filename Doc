@@ -1,3 +1,22 @@
+@Configuration
+public class SwaggerWebFilterConfig {
+
+    @Bean
+    public WebFilter swaggerUiWebFilter() {
+        return (ServerWebExchange exchange, WebFilterChain chain) -> {
+            String path = exchange.getRequest().getURI().getPath();
+            if (path.startsWith("/swagger-ui")) {
+                String newPath = path.replace("/swagger-ui", "/webjars/swagger-ui");
+                ServerWebExchange mutatedExchange = exchange.mutate()
+                        .request(exchange.getRequest().mutate().path(newPath).build())
+                        .build();
+                return chain.filter(mutatedExchange);
+            }
+            return chain.filter(exchange);
+        };
+    }
+}
+
 Here's an example of how you can implement a custom WebFilter for logging requests in a Spring WebFlux application:import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBuffer;
