@@ -1,21 +1,39 @@
-@Configuration
-public class SwaggerWebFilterConfig {
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-    @Bean
-    public WebFilter swaggerUiWebFilter() {
-        return (ServerWebExchange exchange, WebFilterChain chain) -> {
-            String path = exchange.getRequest().getURI().getPath();
-            if (path.startsWith("/swagger-ui")) {
-                String newPath = path.replace("/swagger-ui", "/webjars/swagger-ui");
-                ServerWebExchange mutatedExchange = exchange.mutate()
-                        .request(exchange.getRequest().mutate().path(newPath).build())
-                        .build();
-                return chain.filter(mutatedExchange);
+@Component
+public class SwaggerConfigFilter implements WebFilter {
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        ServerHttpResponse originalResponse = exchange.getResponse();
+        ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(originalResponse) {
+            @Override
+            public Mono<Void> writeWith(Flux<? extends DataBuffer> body) {
+                if ("/swagger-config-uri".equals(exchange.getRequest().getURI().getPath())) {
+                    return super.writeWith(body.map(dataBuffer -> {
+                        // Read the dataBuffer, modify the content, and return a new DataBuffer
+                        // Example: Replace placeholder in the body
+                        String originalContent = ""; // Convert dataBuffer to String
+                        String modifiedContent = originalContent.replace("PLACEHOLDER", exchange.getRequest().getHeaders().getFirst("Host"));
+                        // Convert modifiedContent back to DataBuffer and return
+                        return originalResponse.bufferFactory().wrap(modifiedContent.getBytes());
+                    }));
+                }
+                return super.writeWith(body);
             }
-            return chain.filter(exchange);
         };
+        return chain.filter(exchange.mutate().response(decoratedResponse).build());
     }
 }
+
 
 Here's an example of how you can implement a custom WebFilter for logging requests in a Spring WebFlux application:import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
