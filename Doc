@@ -1,64 +1,32 @@
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
-import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.util.List;
-import java.util.TreeMap;
-
-@Component
-public class SwaggerConfigFilter implements WebFilter {
-
-    private static final String SWAGGER_CONFIG_API_PATH = "/v3/api-docs/swagger-config";
-    private static final String SWAGGER_OAUTH2_REDIRECT_URL_KEY = "oauth2RedirectUrl";
-    private static final String REQUEST_HEADER_ORIGINAL_HOST = "original-host";
-    private static final String DYNAMIC_PLACEHOLDER = "dynamicPlaceholder";
-
-    @Override
+@Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         if (exchange.getRequest().getURI().getPath().contains(SWAGGER_CONFIG_API_PATH)) {
             ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(exchange.getResponse()) {
                 @Override
-                public Mono<Void> writeWith(Flux<? extends org.springframework.core.io.buffer.DataBuffer> body) {
-                    return super.writeWith(body.buffer().flatMap(dataBufferList -> {
-                        // Convert the list of DataBuffer to a single String
-                        String responseBody = dataBufferList.stream()
-                                .map(dataBuffer -> {
-                                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                                    dataBuffer.read(bytes);
-                                    dataBuffer.release();
-                                    return new String(bytes);
-                                })
-                                .reduce(String::concat)
-                                .orElse("");
+                public Mono<Void> writeWith(Flux<? extends DataBuffer> body) {
+                    return super.writeWith(body.map(dataBuffer -> {
+                        byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                        dataBuffer.read(bytes);
+                        String originalBody = new String(bytes, StandardCharsets.UTF_8);
 
-                        // Parse the responseBody into a TreeMap
-                        TreeMap<String, Object> swaggerConfig = parseToTreeMap(responseBody);
-                        
-                        // Replace the dynamic placeholder with the original host header value
-                        List<String> originalHosts = exchange.getRequest().getHeaders().get(REQUEST_HEADER_ORIGINAL_HOST);
-                        if (originalHosts != null && !originalHosts.isEmpty()) {
-                            String host = originalHosts.get(0);
-                            String modifiedConfig = swaggerConfig.toString().replace(DYNAMIC_PLACEHOLDER, host);
-                            // Convert the modifiedConfig back to a DataBuffer
-                            byte[] bytes = modifiedConfig.getBytes();
-                            return Mono.just(exchange.getResponse().bufferFactory().wrap(bytes));
-                        }
+                        // Perform the placeholder replacement
+                        String modifiedBody = originalBody.replace(DYNAMIC_PLACEHOLDER, getOriginalHost(exchange));
 
-                        // If originalHosts is null, return the unmodified body
-                        return Flux.fromIterable(dataBufferList);
+                        // Convert modifiedBody back to DataBuffer
+                        return exchange.getResponse().bufferFactory().wrap(modifiedBody.getBytes(StandardCharsets.UTF_8));
                     }));
                 }
             };
-
             return chain.filter(exchange.mutate().response(decoratedResponse).build());
         }
         return chain.filter(exchange);
     }
+
+    private String getOriginalHost(ServerWebExchange exchange) {
+        List<String> originalHosts = exchange.getRequest().getHeaders().get(REQUEST_HEADER_ORIGINAL_HOST);
+        return (originalHosts != null && !originalHosts.isEmpty()) ? originalHosts.get(0) : "defaultHost";
+    }
+}
 
     private TreeMap<String, Object> parseToTreeMap(String responseBody) {
         // Implement the parsing logic to convert the responseBody to a TreeMap
