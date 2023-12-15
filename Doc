@@ -1,47 +1,37 @@
 @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         if (exchange.getRequest().getURI().getPath().contains(SWAGGER_CONFIG_API_PATH)) {
-            ServerHttpResponse originalResponse = exchange.getResponse();
-            ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(originalResponse) {
+            // Decorate the response with a custom decorator to modify the body
+            ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(exchange.getResponse()) {
                 @Override
                 public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+                    // Check if body is a Flux instance of DataBuffer
                     if (body instanceof Flux) {
                         Flux<? extends DataBuffer> fluxBody = (Flux<? extends DataBuffer>) body;
-                        return super.writeWith(fluxBody.buffer().map(dataBuffers -> {
-                            String originalBody = dataBuffers.stream()
-                                .map(dataBuffer -> StandardCharsets.UTF_8.decode(dataBuffer.asByteBuffer()).toString())
-                                .collect(Collectors.joining());
-                            dataBuffers.forEach(DataBufferUtils::release);
-
-                            // Replace the dynamic placeholder with the original host
-                            String originalHost = exchange.getRequest().getHeaders().getFirst(REQUEST_HEADER_ORIGINAL_HOST);
-                            String modifiedBody = originalBody.replace(DYNAMIC_PLACEHOLDER, originalHost != null ? originalHost : "localhost");
-
-                            // Return the new DataBuffer
-                            byte[] bytes = modifiedBody.getBytes(StandardCharsets.UTF_8);
-                            return originalResponse.bufferFactory().wrap(bytes);
+                        return super.writeWith(fluxBody.map(dataBuffer -> {
+                            // Example of modifying the dataBuffer, replace this with actual logic
+                            // Decode the data buffer into a string
+                            String responseBody = StandardCharsets.UTF_8.decode(dataBuffer.asByteBuffer()).toString();
+                            // Your logic to modify the responseBody here
+                            // Encode the string into a new data buffer
+                            byte[] modifiedBytes = responseBody.getBytes(StandardCharsets.UTF_8);
+                            // Release the original data buffer
+                            DataBufferUtils.release(dataBuffer);
+                            // Return the new data buffer
+                            return exchange.getResponse().bufferFactory().wrap(modifiedBytes);
                         }));
-                    } else {
-                        // If the body is not a Flux (it is a Mono), we deal with it separately
-                        return Mono.from(body)
-                            .flatMap(dataBuffer -> {
-                                String originalBody = StandardCharsets.UTF_8.decode(dataBuffer.asByteBuffer()).toString();
-                                DataBufferUtils.release(dataBuffer);
-
-                                // Replace the dynamic placeholder with the original host
-                                String originalHost = exchange.getRequest().getHeaders().getFirst(REQUEST_HEADER_ORIGINAL_HOST);
-                                String modifiedBody = originalBody.replace(DYNAMIC_PLACEHOLDER, originalHost != null ? originalHost : "localhost");
-
-                                // Return the new DataBuffer
-                                byte[] bytes = modifiedBody.getBytes(StandardCharsets.UTF_8);
-                                return Mono.just(originalResponse.bufferFactory().wrap(bytes));
-                            })
-                            .flatMap(decoratedResponse::writeWith);
                     }
+                    // If body is not a Flux (should be a Mono then), process it separately
+                    return super.writeWith(body);
                 }
             };
+
+            // Continue the filter chain with the decorated response
             return chain.filter(exchange.mutate().response(decoratedResponse).build());
         }
+
+        // If the URI path does not contain the Swagger config path, continue the filter chain normally
         return chain.filter(exchange);
     }
 }
+
