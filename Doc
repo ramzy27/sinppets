@@ -1,163 +1,47 @@
 @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         if (exchange.getRequest().getURI().getPath().contains(SWAGGER_CONFIG_API_PATH)) {
-            ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(exchange.getResponse()) {
+            ServerHttpResponse originalResponse = exchange.getResponse();
+            ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(originalResponse) {
                 @Override
-                public Mono<Void> writeWith(Flux<? extends DataBuffer> body) {
-                    return super.writeWith(body.map(dataBuffer -> {
-                        byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                        dataBuffer.read(bytes);
-                        String originalBody = new String(bytes, StandardCharsets.UTF_8);
+                public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+                    if (body instanceof Flux) {
+                        Flux<? extends DataBuffer> fluxBody = (Flux<? extends DataBuffer>) body;
+                        return super.writeWith(fluxBody.buffer().map(dataBuffers -> {
+                            String originalBody = dataBuffers.stream()
+                                .map(dataBuffer -> StandardCharsets.UTF_8.decode(dataBuffer.asByteBuffer()).toString())
+                                .collect(Collectors.joining());
+                            dataBuffers.forEach(DataBufferUtils::release);
 
-                        // Perform the placeholder replacement
-                        String modifiedBody = originalBody.replace(DYNAMIC_PLACEHOLDER, getOriginalHost(exchange));
+                            // Replace the dynamic placeholder with the original host
+                            String originalHost = exchange.getRequest().getHeaders().getFirst(REQUEST_HEADER_ORIGINAL_HOST);
+                            String modifiedBody = originalBody.replace(DYNAMIC_PLACEHOLDER, originalHost != null ? originalHost : "localhost");
 
-                        // Convert modifiedBody back to DataBuffer
-                        return exchange.getResponse().bufferFactory().wrap(modifiedBody.getBytes(StandardCharsets.UTF_8));
-                    }));
+                            // Return the new DataBuffer
+                            byte[] bytes = modifiedBody.getBytes(StandardCharsets.UTF_8);
+                            return originalResponse.bufferFactory().wrap(bytes);
+                        }));
+                    } else {
+                        // If the body is not a Flux (it is a Mono), we deal with it separately
+                        return Mono.from(body)
+                            .flatMap(dataBuffer -> {
+                                String originalBody = StandardCharsets.UTF_8.decode(dataBuffer.asByteBuffer()).toString();
+                                DataBufferUtils.release(dataBuffer);
+
+                                // Replace the dynamic placeholder with the original host
+                                String originalHost = exchange.getRequest().getHeaders().getFirst(REQUEST_HEADER_ORIGINAL_HOST);
+                                String modifiedBody = originalBody.replace(DYNAMIC_PLACEHOLDER, originalHost != null ? originalHost : "localhost");
+
+                                // Return the new DataBuffer
+                                byte[] bytes = modifiedBody.getBytes(StandardCharsets.UTF_8);
+                                return Mono.just(originalResponse.bufferFactory().wrap(bytes));
+                            })
+                            .flatMap(decoratedResponse::writeWith);
+                    }
                 }
             };
             return chain.filter(exchange.mutate().response(decoratedResponse).build());
         }
         return chain.filter(exchange);
     }
-
-    private String getOriginalHost(ServerWebExchange exchange) {
-        List<String> originalHosts = exchange.getRequest().getHeaders().get(REQUEST_HEADER_ORIGINAL_HOST);
-        return (originalHosts != null && !originalHosts.isEmpty()) ? originalHosts.get(0) : "defaultHost";
-    }
 }
-
-    private TreeMap<String, Object> parseToTreeMap(String responseBody) {
-        // Implement the parsing logic to convert the responseBody to a TreeMap
-        // This typically involves using a JSON library like Jackson or Gson
-        // For this example, just returning an empty TreeMap
-        return new TreeMap<>();
-    }
-}
-
-
-
-Here's an example of how you can implement a custom WebFilter for logging requests in a Spring WebFlux application:import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.charset.Charset;
-
-@Configuration
-public class WebFluxRequestLoggingConfiguration {
-
-    @Bean
-    public WebFilter logFilter() {
-        return (ServerWebExchange exchange, WebFilterChain chain) -> {
-            ServerHttpRequestDecorator decoratedRequest = new ServerHttpRequestDecorator(exchange.getRequest()) {
-                @Override
-                public Flux<DataBuffer> getBody() {
-                    return super.getBody().doOnNext(dataBuffer -> {
-                        byte[] content = new byte[dataBuffer.readableByteCount()];
-                        dataBuffer.read(content);
-                        // Use your logger here
-                        String body = new String(content, Charset.forName("UTF-8"));
-                        System.out.println("REQUEST DATA: " + body); // Replace with your logging framework
-                    });
-                }
-            };
-            return chain.filter(exchange.mutate().request(decoratedRequest).build());
-        };
-    }
-}
-
-
-Certainly! Below is a small documentation template you can use as a starting point to guide users on how to interact with your API. Since I don't have all the specifics of your API, I'll keep it generic; you'll need to fill in the details according to your actual implementation.
-
----
-
-# Your API Documentation
-
-## Overview
-
-This API allows users to perform dynamic data queries and retrieve results in an efficient manner. Queries are customizable, allowing for specific data aggregation and filtering based on user-defined parameters.
-
-## API Endpoints
-
-### Submit Query
-
-- **Endpoint**: `/api/query/submit`
-- **Method**: `POST`
-- **Description**: Submits a data query for processing.
-- **Body**: JSON object representing the query parameters.
-  
-  **Example**:
-  ```json
-  {
-    "cob": "20231110",
-    "cutoff": "HBEU",
-    "valueCols": [
-      {
-        "field": "Results_PRICE.Value",
-        "aggFunc": "sum"
-      },
-      {
-        "field": "Position_PortfolioPath",
-        "aggFunc": "any_value"
-      }
-    ],
-    "aggregation": ["Position_PortfolioName"],
-    "filterModel": {
-      "Results_Snap": {
-        "filterType": "set",
-        "values": ["EUOTH_EQ"]
-      }
-    }
-  }
-  ```
-- **Response**: A unique identifier for the query or a direct link to download the results.
-
-### Download Query Results
-
-- **Endpoint**: `/api/query/download/{hash}`
-- **Method**: `GET`
-- **Description**: Downloads the results of a previously submitted query.
-- **URL Parameters**:
-  - `hash`: The unique hash of the query, received from the submit query endpoint.
-
-## Query Parameters
-
-### Fields and Aggregations
-
-- **Field Syntax**: Fields are denoted by the table name followed by an underscore (`_`), and then the field name, e.g., `TableName_FieldName`.
-- **Value Columns**: `valueCols` define the fields to be aggregated and the aggregation function to apply.
-- **Aggregation Functions**: Supported functions include `sum`, `count`, `any_value`, etc.
-- **Group By**: Use the `aggregation` field to specify which columns to group the results by.
-
-### Filtering
-
-- **Filter Model**: Define filters within the `filterModel` to narrow down the results based on specific conditions.
-- **Filter Types**: Support for various filter types such as `set`, `range`, `equals`, etc.
-
-## Usage Examples
-
-Here you can provide concrete examples of how to call the API, including the actual `curl` command or programming code snippets that demonstrate the API call and handling of the response.
-
-## Error Handling
-
-Describe common error responses and their meanings, so users know how to troubleshoot issues they may encounter.
-
-- `400 Bad Request`: The query parameters were invalid.
-- `404 Not Found`: No results were found for the given query hash.
-- `500 Internal Server Error`: An unexpected error occurred on the server.
-
-## Best Practices
-
-- **Caching**: Use the hash provided after a query submission to check for existing results before re-submitting a similar query.
-- **Query Efficiency**: Minimize the number of fields and records requested to improve response times.
-
----
-
-Ensure you replace placeholders with actual values and provide as much detail as necessary for users to effectively use your API. It's always a good practice to have your documentation reviewed for clarity and completeness by an API user or a developer who is not familiar with your API.
