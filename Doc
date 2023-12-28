@@ -1,3 +1,35 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Get Artifact Name') {
+            steps {
+                script {
+                    // Construct the URL for metadata.xml
+                    def metadataUrl = "${nexusRepoURL}/${groupId.replace('.', '/')}/${artifactId}/${version}/maven-metadata.xml"
+
+                    // Download the metadata.xml file
+                    sh "curl -o metadata.xml ${metadataUrl}"
+
+                    // Parse the metadata.xml to get the latest snapshot version
+                    def metadataXml = readFile('metadata.xml')
+                    def matcher = metadataXml =~ /<value>(.+)<\/value>/
+                    def latestSnapshotVersion = ''
+                    if (matcher.matches()) {
+                        latestSnapshotVersion = matcher.group(1)
+                    }
+
+                    // Construct the artifact filename
+                    def artifactFileName = "${artifactId}-${latestSnapshotVersion}.jar" // Change the extension if needed
+
+                    // Print the artifact name
+                    echo "Latest artifact name: ${artifactFileName}"
+                }
+            }
+        }
+    }
+}
+
 @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         if (exchange.getRequest().getURI().getPath().contains(SWAGGER_CONFIG_API_PATH)) {
