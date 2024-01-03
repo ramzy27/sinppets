@@ -1,3 +1,30 @@
+@Override
+public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+    Mono<DataBuffer> modifiedBody = Mono.from(body)
+        .flatMap(dataBuffer -> {
+            try {
+                log.info("Reading response body");
+                String responseBody = StandardCharsets.UTF_8.decode(dataBuffer.asByteBuffer()).toString();
+
+                log.info("Modifying response body");
+                String modifiedResponse = modifyResponseBody(responseBody, exchange.getRequest().getHeaders().get(REQUEST_HEADER_ORIGINAL_HOST));
+
+                byte[] bytes = modifiedResponse.getBytes(StandardCharsets.UTF_8);
+                DataBufferUtils.release(dataBuffer);
+                
+                log.info("Creating new data buffer");
+                return Mono.just(originalResponse.bufferFactory().wrap(bytes));
+            } catch (Exception e) {
+                log.error("Error during response modification", e);
+                return Mono.error(e);
+            }
+        });
+
+    return super.writeWith(modifiedBody)
+        .doOnTerminate(() -> log.info("Response writing terminated"))
+        .doOnError(error -> log.error("Error writing response", error));
+}
+
 To incorporate logging at each step and provide the complete `WebFilter` component, you can use `log.info` statements. Here's the complete revised code with logging:
 
 ```java
