@@ -1,3 +1,42 @@
+
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.nio.charset.Charset;
+
+public class BodyCachingWebFilter implements WebFilter {
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        return DataBufferUtils.join(exchange.getRequest().getBody())
+                .flatMap(dataBuffer -> {
+                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                    dataBuffer.read(bytes);
+                    DataBufferUtils.release(dataBuffer);
+
+                    String body = new String(bytes, Charset.forName("UTF-8"));
+                    exchange.getAttributes().put("cachedRequestBody", body); // Store body as an attribute
+
+                    // Reconstruct the request with cached body
+                    ServerHttpRequestDecorator decoratedRequest = new ServerHttpRequestDecorator(exchange.getRequest()) {
+                        @Override
+                        public Flux<DataBuffer> getBody() {
+                            return Flux.just(exchange.getResponse().bufferFactory().wrap(bytes));
+                        }
+                    };
+
+                    return chain.filter(exchange.mutate().request(decoratedRequest).build());
+                });
+    }
+}
+
+
 @Override
 public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
     Mono<DataBuffer> modifiedBody = Mono.from(body)
