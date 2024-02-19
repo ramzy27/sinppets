@@ -1,3 +1,84 @@
+# Integration Document for New Schema Adoption and Constraint Management
+
+## 1. Introduction
+
+This document outlines the design and implementation strategy for adopting a new schema in our Java Spring WebFlux API, specifically aimed at dynamic request modeling for BigQuery SQL queries. The new schema introduces `Measure` and `Exposure` columns, categorizing data into point, vector, and matrix risks, each with its own set of rules and constraints. Our objective is to seamlessly integrate these changes, ensuring our system remains robust, flexible, and efficient.
+
+## 2. Schema Update and Data Model Adaptation
+
+### 2.1 Objective
+
+Incorporate the new schema changes into the existing SQL builder logic, focusing on the integration of `Measure` and `Exposure` columns and the distinct handling required for point, vector, and matrix data types.
+
+### 2.2 Design Considerations
+
+- **Dynamic Schema Recognition**: Enhance the SQL builder to dynamically recognize and process requests involving the new `Measure` and `Exposure` columns.
+- **Data Shape Handling**: Implement logic to identify the data shape (point, vector, matrix) based on `Measure` and `Exposure` attributes in the request model.
+- **Rules and Constraints**: Codify rules for handling empty or required fields in `RiskFactor1`, `RiskFactor2`, `Label1`, and `Label2`, ensuring compliance with the new schema's requirements.
+
+## 3. Metadata Management and Configuration
+
+### 3.1 Objective
+
+Develop a comprehensive data dictionary that details risk measures, including their dimensionality and expected number of underliers/risk factors, and make it accessible via an API endpoint.
+
+### 3.2 Design Considerations
+
+- **Dynamic Data Dictionary**: Create a central data dictionary that can be dynamically updated and fetched, serving as a crucial metadata source for the API.
+- **API Endpoint for Discovery**: Expose the data dictionary through a dedicated API endpoint, allowing clients and developers to discover and understand available data fields, measures, and constraints.
+
+## 4. Request Validation and SQL Query Building
+
+### 4.1 Objective
+
+Enhance the API's request validation and SQL query building processes to accommodate the new schema's rules and constraints, particularly regarding the mixing of risk types and the handling of dynamic measures lists.
+
+### 4.2 Design Considerations
+
+- **Request Constraints Enforcement**: Implement logic to validate request models against the new schema constraints, rejecting invalid combinations of risk types and ensuring compliance with `Measure` and `Exposure` requirements.
+- **Enhanced SQL Builder Logic**: Update the SQL builder to support dynamic measures lists, incorporating logic for predefined measure lists and considering future enhancements for wildcard measure support.
+
+## 5. BigQuery Integration and Handling
+
+### 5.1 Objective
+
+Address specific integration challenges with BigQuery, including identifier constraints and the need for pivoting operations to support exposure-related aggregations.
+
+### 5.2 Design Considerations
+
+- **Identifier Mapping**: Implement a mapping mechanism to transform problematic identifiers into BigQuery-compliant names.
+- **Pivoting Support**: Ensure the SQL builder is capable of performing necessary pivoting operations, facilitating effective exposure-related data aggregation.
+
+## 6. API Filtering, Aggregation, and Metadata Access
+
+### 6.1 Objective
+
+Refine the API's filtering logic and enhance the mechanisms for accessing job metadata, improving the system's ability to process and respond to complex queries.
+
+### 6.2 Design Considerations
+
+- **Filtering Logic Standardization**: Establish a clear and standardized approach for API filtering, clearly distinguishing between different types of filters.
+- **Job Metadata Endpoints**: Develop endpoints to provide access to job metadata, supporting detailed queries and data retrieval based on specific job characteristics.
+
+## 7. Documentation and Testing
+
+### 7.1 Objective
+
+Update all relevant documentation to accurately reflect the new features and changes, and conduct comprehensive testing to ensure the updated API meets all functional requirements.
+
+### 7.2 Design Considerations
+
+- **Documentation Update**: Thoroughly revise the API documentation, including detailed descriptions of the new schema, data dictionary access, and updated request validation rules.
+- **Comprehensive Testing**: Perform extensive testing across various scenarios to validate the functionality of the updated API, focusing on schema integration, data handling, and compliance with defined constraints.
+
+## 8. Conclusion
+
+Adopting the new schema and managing the associated constraints require a holistic approach, encompassing schema integration, metadata management, request validation, BigQuery handling, and enhanced documentation and testing. By following the outlined design considerations and implementation strategies, we can ensure a seamless transition to the new schema, maintaining the robustness and efficiency of our system while accommodating the complex requirements of dynamic financial data analysis.
+
+This document serves as a blueprint for the development team, guiding the integration process and ensuring all technical and functional requirements are met with precision and clarity.
+
+
+
 Given the detailed API and implementation constraints you've provided, translating these into well-designed requirements for development and documentation purposes involves structuring them to address each specific constraint systematically. These can be formatted into JIRA tasks or documentation sections to guide the development process.
 
 ### Schema and Data Model Adaptation
