@@ -1,3 +1,166 @@
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class DataDictionaryManager {
+    private final Map<RiskMeasureType, RiskMeasureSpecs> riskMeasureSpecsMap = new ConcurrentHashMap<>();
+
+    public DataDictionaryManager() {
+        initialize();
+    }
+
+    private void initialize() {
+        // Initialize with example specifications, indicating the allowed number of underliers and labels
+        riskMeasureSpecsMap.put(RiskMeasureType.POINT, new RiskMeasureSpecs(RiskMeasureType.POINT, 2, 0));
+        riskMeasureSpecsMap.put(RiskMeasureType.VECTOR, new RiskMeasureSpecs(RiskMeasureType.VECTOR, 1, 1));
+        riskMeasureSpecsMap.put(RiskMeasureType.MATRIX, new RiskMeasureSpecs(RiskMeasureType.MATRIX, 1, 2));
+    }
+
+    public Optional<RiskMeasureSpecs> getRiskMeasureSpecs(RiskMeasureType type) {
+        return Optional.ofNullable(riskMeasureSpecsMap.get(type));
+    }
+    
+    // Method to provide detailed validation feedback
+    public ValidationResult validateRiskMeasureSpecifications(RiskMeasureType type, int underliersCount, List<String> labels) {
+        return getRiskMeasureSpecs(type).map(specs -> {
+            if (underliersCount > specs.getMaxUnderliers()) {
+                return ValidationResult.invalid("Exceeds maximum underliers for " + type);
+            }
+            if (labels.size() > specs.getMaxLabels()) {
+                return ValidationResult.invalid("Exceeds maximum labels for " + type);
+            }
+            return ValidationResult.valid();
+        }).orElse(ValidationResult.invalid("Risk measure type " + type + " not found."));
+    }
+}
+
+
+public class QueryValidator {
+    private final DataDictionaryManager dataDictionaryManager;
+
+    public QueryValidator(DataDictionaryManager dataDictionaryManager) {
+        this.dataDictionaryManager = dataDictionaryManager;
+    }
+
+    public ValidationResult validate(QueryContext context) {
+        // Validate RiskMeasureType and its specifications
+        ValidationResult typeSpecValidation = dataDictionaryManager.validateRiskMeasureSpecifications(
+                context.getRiskMeasureType(), context.getUnderliersCount(), context.getLabels());
+        if (!typeSpecValidation.isValid()) {
+            return typeSpecValidation; // Return detailed feedback from specification validation
+        }
+
+        // Additional validations can be performed here as needed...
+        
+        return ValidationResult.valid(); // Default to valid if all checks pass
+    }
+}
+
+public class QueryContext {
+    private final RiskMeasureType riskMeasureType;
+    private final int underliersCount;
+    private final List<String> labels;
+
+    public QueryContext(RiskMeasureType riskMeasureType, int underliersCount, List<String> labels) {
+        this.riskMeasureType = riskMeasureType;
+        this.underliersCount = underliersCount;
+        this.labels = labels;
+    }
+
+    // Getters
+    public RiskMeasureType getRiskMeasureType() {
+        return riskMeasureType;
+    }
+
+    public int getUnderliersCount() {
+        return underliersCount;
+    }
+
+    public List<String> getLabels() {
+        return labels;
+    }
+}
+
+
+public enum QueryValidationRules implements QueryValidationRule {
+    VALIDATE_RISK_MEASURE_TYPE(context -> {
+        // Example validation logic
+        if (context.getRiskMeasureType() == null) {
+            return ValidationResult.invalid("Risk measure type is missing.");
+        }
+        return ValidationResult.valid();
+    }),
+    // Other rules...
+
+    private final QueryValidationRule rule;
+
+    QueryValidationRules(QueryValidationRule rule) {
+        this.rule = rule;
+    }
+
+    @Override
+    public ValidationResult validate(QueryContext context) {
+        return rule.validate(context);
+    }
+}
+public interface QueryValidationRule {
+    ValidationResult validate(QueryContext context);
+}
+
+public class ValidationResult {
+    private final boolean valid;
+    private final String message;
+
+    private ValidationResult(boolean valid, String message) {
+        this.valid = valid;
+        this.message = message;
+    }
+
+    public static ValidationResult valid() {
+        return new ValidationResult(true, "");
+    }
+
+    public static ValidationResult invalid(String message) {
+        return new ValidationResult(false, message);
+    }
+
+    // Getters
+    public boolean isValid() {
+        return valid;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}
+
+
+public class RiskMeasureSpecs {
+    private final RiskMeasureType type;
+    private final int maxUnderliers;
+    private final int maxLabels;
+
+    public RiskMeasureSpecs(RiskMeasureType type, int maxUnderliers, int maxLabels) {
+        this.type = type;
+        this.maxUnderliers = maxUnderliers;
+        this.maxLabels = maxLabels;
+    }
+
+    // Getters
+    public RiskMeasureType getType() {
+        return type;
+    }
+
+    public int getMaxUnderliers() {
+        return maxUnderliers;
+    }
+
+    public int getMaxLabels() {
+        return maxLabels;
+    }
+}
+
 # Integration Document for New Schema Adoption and Constraint Management
 
 ## 1. Introduction
