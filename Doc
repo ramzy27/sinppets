@@ -1,3 +1,47 @@
+public enum QueryValidationRules {
+    VALIDATE_RISK_MEASURE_TYPE((context, dataDictionaryManager) -> {
+        // Example: validate based on RiskMeasureType
+        return dataDictionaryManager.validateRiskMeasureSpecifications(
+            context.getRiskMeasureType(), context.getUnderliersCount(), context.getLabels());
+    }),
+    // Additional rules can be defined here
+
+    private final ValidationRule rule;
+
+    QueryValidationRules(ValidationRule rule) {
+        this.rule = rule;
+    }
+
+    public ValidationResult validate(QueryContext context, DataDictionaryManager dataDictionaryManager) {
+        return rule.apply(context, dataDictionaryManager);
+    }
+}
+
+
+
+import java.util.Arrays;
+
+public class QueryValidator {
+    private final DataDictionaryManager dataDictionaryManager;
+    private final List<QueryValidationRules> validationRules = Arrays.asList(
+        QueryValidationRules.VALIDATE_RISK_MEASURE_TYPE
+        // List other rules as necessary
+    );
+
+    public QueryValidator(DataDictionaryManager dataDictionaryManager) {
+        this.dataDictionaryManager = dataDictionaryManager;
+    }
+
+    public ValidationResult validate(QueryContext context) {
+        for (QueryValidationRules rule : validationRules) {
+            ValidationResult result = rule.validate(context, dataDictionaryManager);
+            if (!result.isValid()) {
+                return result; // Return the first encountered validation failure with detailed feedback
+            }
+        }
+        return ValidationResult.valid(); // All validations passed
+    }
+}
 
 import java.util.Map;
 import java.util.Optional;
