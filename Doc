@@ -1,3 +1,54 @@
+WITH SourceData AS (
+  SELECT
+    PRICE,
+    DELTA,
+    RHO,
+    EPI,
+    RiskFactor
+  FROM
+    RiskEngine.collation_FTB_adhoc,
+    UNNEST(Exposure) AS Exp
+),
+PositionData AS (
+  SELECT
+    ID AS Position_Id,
+    InstrumentId AS Position_InstrumentId
+  FROM
+    warehouse_refdata_ppe.Positions-HBAP-2024-02-08
+),
+ProductData AS (
+  SELECT
+    ID AS Product_Id
+  FROM
+    warehouse_refdata_ppe.Products-HBAP-2024-02-08
+),
+JoinedData AS (
+  SELECT
+    s.*,
+    p.Position_Id,
+    pd.Product_Id
+  FROM
+    SourceData s
+  JOIN
+    PositionData p
+  ON
+    s.EPI = p.Position_Id
+  JOIN
+    ProductData pd
+  ON
+    p.Position_InstrumentId = pd.Product_Id
+)
+SELECT
+  Result_RiskFactor,
+  PRICE,
+  DELTA,
+  RHO
+FROM
+  JoinedData
+PIVOT (
+  SUM(Value) FOR Measure IN ('PRICE', 'DELTA', 'RHO')
+)
+
 public enum QueryValidationRules {
     VALIDATE_RISK_MEASURE_TYPE((context, dataDictionaryManager) -> {
         // Example: validate based on RiskMeasureType
