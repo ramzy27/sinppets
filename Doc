@@ -1,4 +1,62 @@
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+public class WarehouseQueryBuilder {
+
+    private static final Logger logger = LoggerFactory.getLogger(WarehouseQueryBuilder.class);
+    private final BigQuerySqlQueryConfiguration bigQuerySqlQueryConfiguration;
+
+    public WarehouseQueryBuilder(BigQuerySqlQueryConfiguration bigQuerySqlQueryConfiguration) {
+        this.bigQuerySqlQueryConfiguration = bigQuerySqlQueryConfiguration;
+    }
+
+    public String generateSql(SqlServerPaginationRequest sqlRequest, String resultsTableName, String positionTableName, String productTableName, String cob) {
+        String resultQueryTemplate = bigQuerySqlQueryConfiguration.getFtbQuery();
+
+        List<ColumnVO> resultFields = transformColumnsByTablePrefix(sqlRequest.getValueCols(), "Result_");
+        List<ColumnVO> positionFields = transformColumnsByTablePrefix(sqlRequest.getValueCols(), "Position_");
+        List<ColumnVO> productFields = transformColumnsByTablePrefix(sqlRequest.getValueCols(), "Product_");
+
+        addMandatoryFields(resultFields, positionFields, productFields);
+
+        String pivotColumnValues = resultFields.stream()
+                .map(ColumnVO::field)
+                .map(value -> "'" + value + "'")
+                .collect(Collectors.joining(", "));
+
+        SqlQueryBuilder sqlQueryBuilder = new SqlQueryBuilder(sqlRequest);
+
+        String selectValues = sqlQueryBuilder.selectSql(resultFields);
+        String selectPositions = sqlQueryBuilder.selectSql(positionFields);
+        String selectProducts = sqlQueryBuilder.selectSql(productFields);
+
+        String finalQuery = buildFinalQuery(resultQueryTemplate, selectValues, selectPositions, selectProducts, pivotColumnValues, cob);
+
+        logger.info("Generated SQL: {}", finalQuery);
+        return finalQuery;
+    }
+
+    private List<ColumnVO> transformColumnsByTablePrefix(List<ColumnVO> columns, String prefix) {
+        return columns.stream()
+                .filter(column -> column.getField().startsWith(prefix))
+                .map(column -> new ColumnVO(column.getField().substring(prefix.length()), column.getDisplayName(), column.getAggFunc()))
+                .collect(Collectors.toList());
+    }
+
+    private void addMandatoryFields(List<ColumnVO>... fieldGroups) {
+        // Add mandatory fields to respective column groups as needed
+    }
+
+    private String buildFinalQuery(String template, String selectValues, String selectPositions, String selectProducts, String pivotColumnValues, String cob) {
+        // Use template.replace() to insert dynamic content into the SQL template
+        return template;
+    }
+
+    // Additional helper methods as needed...
+}
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBufferFactory;
