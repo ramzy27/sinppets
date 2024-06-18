@@ -705,4 +705,64 @@ pipeline {
     }
 }
 
+### Notes from OKR Call for Q3
+
+#### General Overview
+- Shift in focus from externalizing batches to configuring and running any type of batch to expedite production processes.
+- Review of Q2 OKRs to determine which to stop, complete, or roll over to Q3.
+
+#### Q2 OKR Review
+1. **Solution Design Finalization**
+   - Aim: Finalize solution design for front office and other areas.
+   - Status: Close to finalizing, pending presentation to Rammstein Noser.
+   - Expected to close before the end of the month.
+
+2. **DIV RWA**
+   - Aim: Deploy necessary code and validate strategy consumption.
+   - Blocked by Andre's absence; no backup available.
+   - IT tasks should be completed by end of the month, but overall objective might extend into Q3 due to the need for parallel runs and legacy process phase-out.
+
+3. **Scenario Runner and Strategic Implementation**
+   - Aim: Implement and scale shop stool, strategic implementation.
+   - Work in progress; detailed discussion deferred to Q3 planning.
+
+4. **Risk Externalization**
+   - Aim: API implementation with proper access controls.
+   - Status: Awaiting business decision on permissioning system; ongoing discussion.
+
+5. **Batch Processing Improvements**
+   - Aim: Enable quantity to run any batch they want, replace fixed and bump testing with simpler batch processes.
+   - Plan to stop fixed and bump entirely in favor of easy price batches.
+   - Discussion on keeping pressure on visualization work by running fixed and bump in the background.
+
+#### Q3 OKR Planning
+1. **Cube Scenarios and Shock Scenarios**
+   - Aim: Implement a framework for running cube and shock scenarios.
+   - Current Status: Requires tooling for input generation and processing in Phoenix.
+   - Next Steps: Develop a road map starting with simpler use cases before tackling complex scenarios.
+
+2. **Hypothetical Trades**
+   - Aim: Support live or hypothetical trades in risk assessments.
+   - Current Status: Hypothetical trades integration needs clarification.
+   - Next Steps: Define clear requirements and integration points for hypothetical trades.
+
+3. **Testing and Debugging Features**
+   - Aim: Enhance testing and debugging features for risk scenarios.
+   - Current Status: Need precise specification of requirements.
+   - Next Steps: Provide examples and outline necessary features to convert requirements into actionable tasks.
+
+#### Action Items
+- Finalize solution design and present to stakeholders.
+- Complete IT tasks for DIV RWA and plan for parallel runs.
+- Address pending business decisions on access controls and permissioning models.
+- Develop a roadmap for cube scenarios starting with simple use cases.
+- Define requirements for hypothetical trades and testing/debugging features.
+- Schedule demo of existing functionalities in surface for team understanding.
+- Align Q3 OKRs with ongoing and new priorities, ensuring clear deliverables and timelines.
+
+#### Follow-Up
+- Regular updates on progress of pending tasks.
+- Continuous alignment with business stakeholders to address dependencies and approvals.
+- Detailed planning and execution strategy for Q3 objectives to ensure smooth transition and completion.
+
 
